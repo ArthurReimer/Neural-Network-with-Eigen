@@ -10,11 +10,14 @@ class Layer {
     float* weights;
     float* biases;
         
-    Layer() : neuronAmount(0), weights(nullptr) {}
+    Layer() : neuronAmount(0), weights(nullptr), biases(nullptr) {}
 
     ~Layer() {
         if (weights != nullptr) {
             free(weights);
+        }
+        if (biases != nullptr) {
+            free(biases);
         }
     }
 };
