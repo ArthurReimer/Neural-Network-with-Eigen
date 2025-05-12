@@ -1,0 +1,74 @@
+#include <iostream>
+#include <cstdlib>
+#include <vector>
+#include <random>
+using namespace std;
+
+class Layer {
+    public:
+    int neuronAmount;
+    float* weights;
+        
+    Layer() : neuronAmount(0), weights(nullptr) {}
+
+    ~Layer() {
+        if (weights != nullptr) {
+            free(weights);
+        }
+    }
+};
+
+
+class Network {
+    public:
+        std::vector<Layer> layers;
+
+        void setWeights(std::vector<float> inputs) {
+            int layerAmount = layers.size();
+            Layer* prevLayer = nullptr;
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_real_distribution<> dist(-1.0, 1.0);
+            
+            for (int i = 0; i < layerAmount; i++) {
+                Layer* currentLayer = &layers[i];
+
+                if (i == 0) {
+                    currentLayer->weights = (float*) malloc(currentLayer->neuronAmount*inputs.size() * sizeof(float));
+                    for (size_t n = 0; n < currentLayer->neuronAmount*inputs.size(); n++) {
+                        currentLayer->weights[n] = dist(gen);
+                        cout << currentLayer->weights[n] << "\n";
+                    }
+                } else {
+                    currentLayer->weights = (float*) malloc(currentLayer->neuronAmount * prevLayer->neuronAmount * sizeof(float));
+                    for (size_t n = 0; n < currentLayer->neuronAmount*prevLayer->neuronAmount; n++) {
+                        currentLayer->weights[n] = dist(gen);
+                        cout << currentLayer->weights[n] << "\n";              
+                    }
+                }
+
+                prevLayer = currentLayer;
+            }
+        }
+};
+
+
+
+int main() {
+
+
+    Layer hiddenLayer;
+    Layer outputLayer;
+
+    hiddenLayer.neuronAmount = 16;
+    outputLayer.neuronAmount = 10;
+
+    std::vector<Layer> layers = {hiddenLayer, outputLayer};
+    std::vector<float> inputs = {0.5, 0.1, 0.2, 0.3, 0.6, 0.7, 0.9, 0.8};
+
+    Network nn;
+    nn.layers = layers;
+    nn.setWeights(inputs);
+
+    return 0;
+}
