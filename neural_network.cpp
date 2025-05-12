@@ -18,11 +18,11 @@ class Layer {
     }
 };
 
-
 class Network {
     public:
         std::vector<Layer> layers;
 
+        // Setting random starting weights with floats between -1 and 1
         void setWeights(std::vector<float> inputs) {
             int layerAmount = layers.size();
             Layer* prevLayer = nullptr;
@@ -50,13 +50,15 @@ class Network {
                 prevLayer = currentLayer;
             }
         }
+
+        // Forward pass calculation of all layers in the neural network
+        void forwardPass() {
+
+        }
 };
 
 
-
 int main() {
-
-
     Layer hiddenLayer;
     Layer outputLayer;
 
