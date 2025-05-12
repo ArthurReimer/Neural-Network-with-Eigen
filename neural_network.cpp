@@ -8,6 +8,7 @@ class Layer {
     public:
     int neuronAmount;
     float* weights;
+    float* biases;
         
     Layer() : neuronAmount(0), weights(nullptr) {}
 
@@ -24,7 +25,7 @@ class Network {
 
         // Setting random starting weights with floats between -1 and 1
         void setWeights(std::vector<float> inputs) {
-            int layerAmount = layers.size();
+            size_t layerAmount = layers.size();
             Layer* prevLayer = nullptr;
             std::random_device rd;
             std::mt19937 gen(rd());
@@ -37,13 +38,11 @@ class Network {
                     currentLayer->weights = (float*) malloc(currentLayer->neuronAmount*inputs.size() * sizeof(float));
                     for (size_t n = 0; n < currentLayer->neuronAmount*inputs.size(); n++) {
                         currentLayer->weights[n] = dist(gen);
-                        cout << currentLayer->weights[n] << "\n";
                     }
                 } else {
                     currentLayer->weights = (float*) malloc(currentLayer->neuronAmount * prevLayer->neuronAmount * sizeof(float));
                     for (size_t n = 0; n < currentLayer->neuronAmount*prevLayer->neuronAmount; n++) {
-                        currentLayer->weights[n] = dist(gen);
-                        cout << currentLayer->weights[n] << "\n";              
+                        currentLayer->weights[n] = dist(gen);         
                     }
                 }
 
@@ -51,8 +50,25 @@ class Network {
             }
         }
 
+        // Setting random starting biases with floats between -1 and 1
+        void setBiases() {
+            size_t layerAmount = layers.size();
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_real_distribution<> dist(-1.0, 1.0);
+
+            for (int i = 0; i < layerAmount; i++) {
+                Layer* currentLayer = &layers[i];
+                currentLayer->biases = (float*) malloc(currentLayer->neuronAmount * sizeof(float));
+
+                for (int n = 0; n < currentLayer->neuronAmount; n++) {
+                    currentLayer->biases[n] = dist(gen);
+                }
+            }
+        }
+
         // Forward pass calculation of all layers in the neural network
-        void forwardPass() {
+        void forwardPass(std::vector<float> inputs) {
 
         }
 };
@@ -71,6 +87,7 @@ int main() {
     Network nn;
     nn.layers = layers;
     nn.setWeights(inputs);
+    nn.setBiases();
 
     return 0;
 }
