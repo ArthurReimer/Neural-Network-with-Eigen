@@ -57,11 +57,11 @@ class Network {
             std::mt19937 gen(rd());
             std::uniform_real_distribution<> dist(-1.0, 1.0);
 
-            for (int i = 0; i < layerAmount; i++) {
+            for (size_t i = 0; i < layerAmount; i++) {
                 Layer* currentLayer = &layers[i];
                 currentLayer->biases = (float*) malloc(currentLayer->neuronAmount * sizeof(float));
 
-                for (int n = 0; n < currentLayer->neuronAmount; n++) {
+                for (size_t n = 0; n < currentLayer->neuronAmount; n++) {
                     currentLayer->biases[n] = dist(gen);
                 }
             }
