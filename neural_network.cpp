@@ -4,22 +4,17 @@
 #include <random>
 using namespace std;
 
+typedef std::vector<std::vector<float>> Matrix;
+
 class Layer {
     public:
     int neuronAmount;
-    float* weights;
-    float* biases;
+    Matrix weights;
+    std::vector<float> biases;
+    std::vector<float> activations;
+    std::vector<float> netInputs;
         
-    Layer() : neuronAmount(0), weights(nullptr), biases(nullptr) {}
-
-    ~Layer() {
-        if (weights != nullptr) {
-            free(weights);
-        }
-        if (biases != nullptr) {
-            free(biases);
-        }
-    }
+    Layer() : neuronAmount(0) {}
 };
 
 class Network {
@@ -34,22 +29,21 @@ class Network {
             std::mt19937 gen(rd());
             std::uniform_real_distribution<> dist(-1.0, 1.0);
             
-            for (int i = 0; i < layerAmount; i++) {
-                Layer* currentLayer = &layers[i];
+            for (size_t l = 0; l < layerAmount; l++) {
+                Layer* currentLayer = &layers[l];
 
-                if (i == 0) {
-                    currentLayer->weights = (float*) malloc(currentLayer->neuronAmount*inputs.size() * sizeof(float));
-                    for (size_t n = 0; n < currentLayer->neuronAmount*inputs.size(); n++) {
-                        currentLayer->weights[n] = dist(gen);
-                    }
-                } else {
-                    currentLayer->weights = (float*) malloc(currentLayer->neuronAmount * prevLayer->neuronAmount * sizeof(float));
-                    for (size_t n = 0; n < currentLayer->neuronAmount*prevLayer->neuronAmount; n++) {
-                        currentLayer->weights[n] = dist(gen);         
-                    }
+                int cols = (l == 0)
+                    ? inputs.size()
+                    : layers[l-1].neuronAmount;
+                int rows = currentLayer->neuronAmount;
+
+                currentLayer->weights = Matrix(rows, std::vector<float>(cols));
+
+                for (size_t r = 0; r < rows; ++r) {
+                    for (size_t c = 0; c < cols; ++c) {
+                        currentLayer->weights[r][c] = dist(gen);
+                    } 
                 }
-
-                prevLayer = currentLayer;
             }
         }
 
@@ -60,9 +54,9 @@ class Network {
             std::mt19937 gen(rd());
             std::uniform_real_distribution<> dist(-1.0, 1.0);
 
-            for (size_t i = 0; i < layerAmount; i++) {
-                Layer* currentLayer = &layers[i];
-                currentLayer->biases = (float*) malloc(currentLayer->neuronAmount * sizeof(float));
+            for (size_t l = 0; l < layerAmount; l++) {
+                Layer* currentLayer = &layers[l];
+                currentLayer->biases.resize(currentLayer->neuronAmount);
 
                 for (size_t n = 0; n < currentLayer->neuronAmount; n++) {
                     currentLayer->biases[n] = dist(gen);
@@ -72,17 +66,51 @@ class Network {
 
         // Forward pass calculation of all layers in the neural network
         void forwardPass(std::vector<float> inputs) {
+            std::vector<float> currentInputs = inputs;
 
+            for (size_t l = 0; l < layers.size(); l++) {
+                Layer* currentLayer = &layers[l];
+                currentLayer->activations.resize(currentLayer->neuronAmount);
+                currentLayer->netInputs.resize(currentLayer->neuronAmount);
+                
+                for (size_t n = 0; n < currentLayer->neuronAmount; n++) {
+                    float weightedSum = 0.0f;
+
+                    for (size_t c = 0; c < currentLayer->weights[n].size(); c++) {
+                        weightedSum += currentLayer->weights[n][c] * currentInputs[c];
+                    }
+                    currentLayer->netInputs[n] = weightedSum + currentLayer->biases[n];
+                    currentLayer->activations[n] = std::max(0.0f, currentLayer->netInputs[n]);
+                }
+                currentInputs = currentLayer->activations;
+            }
         }
 };
 
+void testForwardPass() {
+    Layer hiddenLayer, outputLayer;
+    hiddenLayer.neuronAmount = 2;  // 2 hidden neurons
+    outputLayer.neuronAmount = 1;  // 1 output neuron
+
+    Network nn;
+    nn.layers = {hiddenLayer, outputLayer};  // Input layer is implicit, not defined explicitly
+
+    nn.layers[0].weights = {{0.5, -0.5}, {0.1, -0.3}};  // Weights for hidden layer (2x2 matrix)
+    nn.layers[0].biases = {0.1, -0.2};  // Biases for hidden layer
+    nn.layers[1].weights = {{0.4, -0.1}};  // Weights for output layer (1x2 matrix)
+    nn.layers[1].biases = {0.3};  // Biases for output layer
+
+    std::vector<float> inputs = {0.5, -0.5};  // 2 inputs
+
+    nn.forwardPass(inputs);
+
+    cout << nn.layers[1].activations[0] << "\n"; // Correct output should be 0.54
+}
+
 
 int main() {
-    Layer hiddenLayer;
-    Layer outputLayer;
-
-    hiddenLayer.neuronAmount = 16;
-    outputLayer.neuronAmount = 10;
+    Layer hiddenLayer; hiddenLayer.neuronAmount = 64;
+    Layer outputLayer; outputLayer.neuronAmount = 10;
 
     std::vector<Layer> layers = {hiddenLayer, outputLayer};
     std::vector<float> inputs = {0.5, 0.1, 0.2, 0.3, 0.6, 0.7, 0.9, 0.8};
@@ -91,6 +119,7 @@ int main() {
     nn.layers = layers;
     nn.setWeights(inputs);
     nn.setBiases();
+    nn.forwardPass(inputs);
 
     return 0;
 }
