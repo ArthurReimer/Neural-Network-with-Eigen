@@ -41,6 +41,19 @@ void printVector(const std::vector<float>& vec) {
     std::cout << "]\n";
 }
 
+std::vector<float> flatten(matrix mat) {
+    std::size_t rows = mat.size();
+    std::size_t columns = mat.empty() ? 0 : mat[0].size();
+    std::vector<float> newVec(rows*columns);
+
+    for (std::size_t r = 0; r < rows; r++) {
+        for (std::size_t c = 0; c < columns; c++) {
+            newVec[r * columns + c] = mat[r][c];
+        }
+    }
+    return newVec;
+}
+
 class Network {
     public:
         // Inputs don't count as a layer object
@@ -115,18 +128,17 @@ class Network {
                 currentLayer->netInputs = netInputs;
                 currentLayer->activations = activations;
 
-                if (l == layers.size()-1) {
-                    for (size_t i = 0; i < currentLayer->activations.size(); i++) {
-                        std::cout << currentInputs[i] << "\n";
-                    }
-                }
+                // if (l == layers.size()-1) {
+                //     for (size_t i = 0; i < currentLayer->activations.size(); i++) {
+                //         std::cout << currentInputs[i] << "\n";
+                //     }
+                // }
             }
         }
 
         // Backward pass calculation
         void backwardPass(float η, std::vector<float> target, std::vector<float> inputs) {
             size_t layerAmount = layers.size();
-            
 
             for (int l = layerAmount - 1; l >= 0; l--) {
                 Layer *currentLayer = &layers[l];
@@ -148,6 +160,7 @@ class Network {
                         deltas[n] = sigmoidDerivative(currentLayer->netInputs[n]) * weighted;
                     }
                 }
+
                 printVector(deltas);
                 currentLayer->deltas = deltas;
 
@@ -166,7 +179,6 @@ class Network {
                 }
             }
         }
-
 };
 
 void testForwardPass() {
@@ -204,7 +216,6 @@ int main() {
     nn.setWeights(inputs);
     nn.setBiases();
     nn.forwardPass(inputs);
-    std::cout << "\n";
     nn.backwardPass(0.5f, {5.0, 3.0, 1.0, 3.0, 1.0}, inputs);
 
     // for (int i = 0; i < 1000; i++) {
