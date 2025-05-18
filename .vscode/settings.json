@@ -52,6 +52,8 @@
         "random": "cpp",
         "algorithm": "cpp",
         "optional": "cpp",
-        "iomanip": "cpp"
+        "iomanip": "cpp",
+        "fstream": "cpp",
+        "string": "cpp"
     }
 }
