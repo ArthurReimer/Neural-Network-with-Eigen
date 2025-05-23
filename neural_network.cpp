@@ -161,13 +161,13 @@ class Network {
                     std::size_t prevAmount = (l == 0)
                         ? inputs.size()
                         : layers[l-1]->neuronAmount;
-                    currentLayer.biases[n] -= η * deltas[n];
+                    currentLayer.biases[n] += η * deltas[n];
 
                     for (std::size_t prev_n = 0; prev_n < prevAmount; prev_n++) {
                         float activation = (l == 0)
                             ? inputs[prev_n]
                             : layers[l-1]->activations[prev_n];          
-                        currentLayer.weights[n][prev_n] -= η * activation * deltas[n];
+                        currentLayer.weights[n][prev_n] += η * activation * deltas[n];
                     }
                 }
             }
@@ -187,7 +187,7 @@ std::vector<float> normalize(const std::vector<uint8_t>& vec) {
     return newVec;
 }
 
-vector<float> oneHotEncoding(uint8_t label, size_t outputAmount) {
+std::vector<float> oneHotEncoding(uint8_t label, size_t outputAmount) {
     vector<float> newVec(outputAmount, 0.0f);
 
     if (label < outputAmount) {
@@ -201,6 +201,25 @@ size_t argmax(const std::vector<float>& vec) {
     return std::distance(vec.begin(), std::max_element(vec.begin(), vec.end()));
 }
 
+// function MSE_loss(expected, output, output_length)
+//     return sum((expected-output).*(expected-output)) / output_length
+// end
+
+float lossMSE(std::vector<float> expected, std::vector<float> output) {
+    if (expected.size() != output.size()) {
+        std::cout << "Invalid size output and expected in MSE calculation" << "\n";
+        return 0.0f;
+    }
+
+    float sum = 0.0f;
+    for (size_t i = 0; i < output.size(); i++) {
+        sum += (expected[i]-output[i]) * (expected[i]-output[i]);
+    }
+    return sum/output.size();
+}
+
+
+
 int main() {
     auto dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>();
 
@@ -209,7 +228,8 @@ int main() {
     std::cout << "Nbr of test images = " << dataset.test_images.size() << std::endl;
     std::cout << "Nbr of test labels = " << dataset.test_labels.size() << std::endl;
 
-    Layer hiddenLayer; hiddenLayer.neuronAmount = 256;
+    Layer hiddenLayer; hiddenLayer.neuronAmount = 512;
+    Layer hiddenLayer2; hiddenLayer2.neuronAmount = 256;
     Layer outputLayer; outputLayer.neuronAmount = 10;
 
     Network nn;
@@ -218,28 +238,36 @@ int main() {
     const size_t outputLength = outputLayer.neuronAmount;
 
     nn.layers.push_back(std::make_unique<Layer>(hiddenLayer));
+    nn.layers.push_back(std::make_unique<Layer>(hiddenLayer2));
     nn.layers.push_back(std::make_unique<Layer>(outputLayer));
 
     nn.setWeights(inputLength);
     nn.setBiases();
 
-    // std::cout << nn.layers[0]->neuronAmount << "\n";
-    // std::cout << nn.layers[1]->neuronAmount << "\n";
+for (size_t e = 0; e < 1; e++) {
+    size_t correctCount = 0;
 
-    // printVector(nn.layers[0]->weights[0]);
-    
-
-
-    // std::cout << "Working" << "\n";
-    for (int i = 0; i < 10000; i++) {
+    for (size_t i = 0; i < dataset.training_images.size(); i++) {
         std::vector<float> inputs = normalize(dataset.training_images[i]);
         
         uint8_t correctLabel = dataset.training_labels[i];
+        std::vector<float> correctLabelArr = oneHotEncoding(correctLabel, outputLength);
         
         nn.forwardPass(inputs);
-        std::cout << "Prediction: " << argmax(nn.layers[1]->activations) << " Actual label:" << static_cast<int>(correctLabel) << "\n";
-        nn.backwardPass(0.01f, oneHotEncoding(correctLabel, outputLength), inputs);
+        
+        int predictedLabel = argmax(nn.layers[nn.layers.size()-1]->activations);
+        if (predictedLabel == correctLabel) {
+            correctCount++;
+        }
+
+        std::cout << lossMSE(correctLabelArr, nn.layers[nn.layers.size()-1]->activations) << "\n";
+        nn.backwardPass(0.01f, correctLabelArr, inputs);
     }
+
+    float accuracy = static_cast<float>(correctCount) / dataset.training_images.size();
+    std::cout << "Epoch " << e + 1 << " Accuracy: " << accuracy * 100.0f << "%\n";
+}
+
 
     std::cout << "Ended" << "\n";
 
