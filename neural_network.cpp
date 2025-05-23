@@ -244,29 +244,29 @@ int main() {
     nn.setWeights(inputLength);
     nn.setBiases();
 
-for (size_t e = 0; e < 1; e++) {
-    size_t correctCount = 0;
+    for (size_t e = 0; e < 1; e++) {
+        size_t correctCount = 0;
 
-    for (size_t i = 0; i < dataset.training_images.size(); i++) {
-        std::vector<float> inputs = normalize(dataset.training_images[i]);
-        
-        uint8_t correctLabel = dataset.training_labels[i];
-        std::vector<float> correctLabelArr = oneHotEncoding(correctLabel, outputLength);
-        
-        nn.forwardPass(inputs);
-        
-        int predictedLabel = argmax(nn.layers[nn.layers.size()-1]->activations);
-        if (predictedLabel == correctLabel) {
-            correctCount++;
+        for (size_t i = 0; i < dataset.training_images.size(); i++) {
+            std::vector<float> inputs = normalize(dataset.training_images[i]);
+            
+            uint8_t correctLabel = dataset.training_labels[i];
+            std::vector<float> correctLabelArr = oneHotEncoding(correctLabel, outputLength);
+            
+            nn.forwardPass(inputs);
+            
+            int predictedLabel = argmax(nn.layers[nn.layers.size()-1]->activations);
+            if (predictedLabel == correctLabel) {
+                correctCount++;
+            }
+
+            std::cout << lossMSE(correctLabelArr, nn.layers[nn.layers.size()-1]->activations) << "\n";
+            nn.backwardPass(0.01f, correctLabelArr, inputs);
         }
 
-        std::cout << lossMSE(correctLabelArr, nn.layers[nn.layers.size()-1]->activations) << "\n";
-        nn.backwardPass(0.01f, correctLabelArr, inputs);
+        float accuracy = static_cast<float>(correctCount) / dataset.training_images.size();
+        std::cout << "Epoch " << e + 1 << " Accuracy: " << accuracy * 100.0f << "%\n";
     }
-
-    float accuracy = static_cast<float>(correctCount) / dataset.training_images.size();
-    std::cout << "Epoch " << e + 1 << " Accuracy: " << accuracy * 100.0f << "%\n";
-}
 
 
     std::cout << "Ended" << "\n";
