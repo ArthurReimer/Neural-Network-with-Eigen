@@ -5,24 +5,12 @@
 #include <iomanip>
 #include <chrono>
 #include <memory>
+#include <typeinfo>
+#include <algorithm>
 using namespace std;
-// #include "mnist/mnist_reader_less.hpp"
-
-// #define MNIST_DATA_LOCATION "./data"
+#include "mnist/include/mnist/mnist_reader.hpp"
  
 typedef std::vector<std::vector<float>> Matrix;
-
-class Layer {
-    public:
-    int neuronAmount;
-    Matrix weights;
-    std::vector<float> biases;
-    std::vector<float> activations;
-    std::vector<float> netInputs;
-    std::vector<float> deltas;
-        
-    Layer() : neuronAmount(0) {}
-};
 
 // Sigmoid activation function
 float sigmoid(float x) {
@@ -46,18 +34,17 @@ void printVector(const std::vector<float>& vec) {
     std::cout << "]\n";
 }
 
-std::vector<float> flatten(Matrix mat) {
-    std::size_t rows = mat.size();
-    std::size_t columns = mat.empty() ? 0 : mat[0].size();
-    std::vector<float> newVec(rows*columns);
-
-    for (std::size_t r = 0; r < rows; r++) {
-        for (std::size_t c = 0; c < columns; c++) {
-            newVec[r * columns + c] = mat[r][c];
-        }
-    }
-    return newVec;
-}
+class Layer {
+    public:
+    int neuronAmount;
+    Matrix weights;
+    std::vector<float> biases;
+    std::vector<float> activations;
+    std::vector<float> netInputs;
+    std::vector<float> deltas;
+        
+    Layer() : neuronAmount(0) {}
+};
 
 class Network {
     public:
@@ -67,7 +54,7 @@ class Network {
         std::vector<std::unique_ptr<Layer>> layers;
 
         // Setting random starting weights with floats between -1 and 1
-        void setWeights(std::vector<float> inputs) {
+        void setWeights(const size_t inputLength) {
             std::size_t layerAmount = layers.size();
             Layer* prevLayer = nullptr;
             std::random_device rd;
@@ -78,7 +65,7 @@ class Network {
                 Layer& currentLayer = *(layers[l]);
 
                 int cols = (l == 0)
-                    ? inputs.size()
+                    ? inputLength
                     : layers[l-1]->neuronAmount;
                 int rows = currentLayer.neuronAmount;
 
@@ -168,7 +155,7 @@ class Network {
                 }
 
                 currentLayer.deltas = deltas;
-                printVector(currentLayer.deltas);
+                // printVector(currentLayer.deltas);
 
                 for (std::size_t n = 0; n < neuronAmount; n++) {
                     std::size_t prevAmount = (l == 0)
@@ -187,40 +174,107 @@ class Network {
         }
 };
 
+
+
+std::vector<float> normalize(const std::vector<uint8_t>& vec) {
+    std::size_t len = vec.size();
+    std::vector<float> newVec(len);
+
+    for (size_t i = 0; i < len; i++) {
+        newVec[i] = static_cast<float>(vec[i]) / 255.0f;
+    }
+
+    return newVec;
+}
+
+vector<float> oneHotEncoding(uint8_t label, size_t outputAmount) {
+    vector<float> newVec(outputAmount, 0.0f);
+
+    if (label < outputAmount) {
+        newVec[label] = 1.0f;
+    }
+
+    return newVec;
+}
+
+size_t argmax(const std::vector<float>& vec) {
+    return std::distance(vec.begin(), std::max_element(vec.begin(), vec.end()));
+}
+
 int main() {
-    //auto dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>();
+    auto dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>();
 
-    // mnist::MNIST_dataset<std::vector, std::vector<uint8_t>, uint8_t> dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>(MNIST_DATA_LOCATION);
-
-    // std::cout << "Nbr of training images = " << dataset.training_images.size() << std::endl;
-    // std::cout << "Nbr of training labels = " << dataset.training_labels.size() << std::endl;
-    // std::cout << "Nbr of test images = " << dataset.test_images.size() << std::endl;
-    // std::cout << "Nbr of test labels = " << dataset.test_labels.size() << std::endl;
+    std::cout << "Nbr of training images = " << dataset.training_images.size() << std::endl;
+    std::cout << "Nbr of training labels = " << dataset.training_labels.size() << std::endl;
+    std::cout << "Nbr of test images = " << dataset.test_images.size() << std::endl;
+    std::cout << "Nbr of test labels = " << dataset.test_labels.size() << std::endl;
 
     Layer hiddenLayer; hiddenLayer.neuronAmount = 256;
-    Layer hiddenLayer2; hiddenLayer2.neuronAmount = 256;
-    Layer outputLayer; outputLayer.neuronAmount = 5;
-
-    std::vector<float> inputs = {0.5, 0.1, 0.2, 0.3, 0.6, 0.7, 0.9, 0.8};
+    Layer outputLayer; outputLayer.neuronAmount = 10;
 
     Network nn;
+
+    const size_t inputLength = dataset.training_images[0].size();
+    const size_t outputLength = outputLayer.neuronAmount;
 
     nn.layers.push_back(std::make_unique<Layer>(hiddenLayer));
     nn.layers.push_back(std::make_unique<Layer>(outputLayer));
 
-    nn.setWeights(inputs);
+    nn.setWeights(inputLength);
     nn.setBiases();
 
-    auto start = std::chrono::high_resolution_clock::now();
+    // std::cout << nn.layers[0]->neuronAmount << "\n";
+    // std::cout << nn.layers[1]->neuronAmount << "\n";
 
-    nn.forwardPass(inputs);
-    nn.backwardPass(0.5f, {5.0, 3.0, 1.0, 3.0, 1.0}, inputs);
+    // printVector(nn.layers[0]->weights[0]);
+    
 
-    auto end = std::chrono::high_resolution_clock::now();
 
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+    // std::cout << "Working" << "\n";
+    for (int i = 0; i < 10000; i++) {
+        std::vector<float> inputs = normalize(dataset.training_images[i]);
+        
+        uint8_t correctLabel = dataset.training_labels[i];
+        
+        nn.forwardPass(inputs);
+        std::cout << "Prediction: " << argmax(nn.layers[1]->activations) << " Actual label:" << static_cast<int>(correctLabel) << "\n";
+        nn.backwardPass(0.01f, oneHotEncoding(correctLabel, outputLength), inputs);
+    }
 
-    std::cout << "Time taken: " << duration.count() << " seconds" << "\n";
+    std::cout << "Ended" << "\n";
+
+
+
+    // Layer hiddenLayer; hiddenLayer.neuronAmount = 256;
+    // Layer hiddenLayer2; hiddenLayer2.neuronAmount = 256;
+    // Layer outputLayer; outputLayer.neuronAmount = 5;
+
+    // std::vector<float> inputs = {0.5, 0.1, 0.2, 0.3, 0.6, 0.7, 0.9, 0.8};
+
+    // Network nn;
+
+    // nn.layers.push_back(std::make_unique<Layer>(hiddenLayer));
+    // nn.layers.push_back(std::make_unique<Layer>(outputLayer));
+
+    // nn.setWeights(inputs);
+    // nn.setBiases();
+
+    // auto start = std::chrono::high_resolution_clock::now();
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
+    // std::uniform_real_distribution<float> dist(0.0, 9.0);
+
+    // for (int i = 1; i < 100; i++) {
+    //     std::vector<float> inputs = {dist(gen), dist(gen), dist(gen), dist(gen), dist(gen)};
+    //     nn.forwardPass(inputs);
+    //     nn.backwardPass(0.01f, {0,0,0,0,1}, inputs);
+    // }
+
+    // auto end = std::chrono::high_resolution_clock::now();
+
+    // auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+
+    // std::cout << "Time taken: " << duration.count() << " seconds" << "\n";
     
     return 0;
 }
