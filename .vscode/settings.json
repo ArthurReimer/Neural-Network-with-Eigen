@@ -80,6 +80,8 @@
         "valarray": "cpp",
         "xhash": "cpp",
         "xtree": "cpp",
-        "dense": "cpp"
+        "dense": "cpp",
+        "alignedvector3": "cpp",
+        "cstdarg": "cpp"
     }
 }

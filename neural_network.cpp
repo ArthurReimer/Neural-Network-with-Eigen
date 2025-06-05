@@ -9,26 +9,17 @@
 #include <algorithm>
 #include <numeric>
 #include <cmath>
-using namespace std;
 #include "mnist/include/mnist/mnist_reader.hpp"
 #include "external/eigen/Eigen/Dense"
+using namespace std;
 using Eigen::MatrixXf;
 using Eigen::VectorXf;
- 
-typedef std::vector<std::vector<float>> mat;
 
-// Sigmoid activation function
-float sigmoid(float x) {
-    return 1.0f / (1.0f + std::exp(-x));
-}
+#ifndef EIGEN_CORE_H
 
-// Derivative of the sigmoid function
-float sigmoidDerivative(float x) {
-    float s = sigmoid(x);
-    return s * (1.0f - s);
-}
+#else
 
-void printVector(const VectorXf& vec) {
+inline void printVector(const VectorXf& vec) {
     std::cout << "[";
     for (int i = 0; i < vec.size(); i++) {
         std::cout << std::fixed << std::setprecision(4) << vec[i];
@@ -36,23 +27,39 @@ void printVector(const VectorXf& vec) {
             std::cout << ", ";
         }
     }
-    std::cout << "]\n";
+    std::cout << "]" << std::endl;
 }
+
+inline void printVector_uint8_t(const std::vector<uint8_t>& vec) {
+    std::cout << "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        std::cout << static_cast<int>(vec[i]);
+        if (i != vec.size() - 1) {
+            std::cout << ", ";
+        }
+    }
+    std::cout << "]" << std::endl;
+}
+
 
 class Layer {
     public:
-    int neuronAmount;
-    MatrixXf weights;
-    VectorXf biases;
-    VectorXf activations;
-    VectorXf netInputs;
-    VectorXf deltas;
+        int neuronAmount;
+        MatrixXf weights;
+        VectorXf biases;
+        VectorXf activations;
+        VectorXf netInputs;
+        VectorXf deltas;
+        VectorXf sigmoidDerivs;
+        VectorXf weightedDeltas;
 
-    Layer(int n) : neuronAmount(n),
-               biases(VectorXf::Zero(n)),
-               activations(VectorXf::Zero(n)),
-               netInputs(VectorXf::Zero(n)),
-               deltas(VectorXf::Zero(n)) {}
+        Layer(int n) : neuronAmount(n),
+            biases(VectorXf::Zero(n)),
+            activations(VectorXf::Zero(n)),
+            netInputs(VectorXf::Zero(n)),
+            deltas(VectorXf::Zero(n)),
+            sigmoidDerivs(VectorXf::Zero(n)),
+            weightedDeltas(VectorXf::Zero(n)) {}
 };
 
 class Network {
@@ -113,7 +120,7 @@ class Network {
                 int neuronAmount = currentLayer.neuronAmount;
 
                 currentLayer.netInputs = currentLayer.weights * currentInputs + currentLayer.biases;
-                currentLayer.activations = currentLayer.netInputs.unaryExpr([](float x) { return sigmoid(x); });
+                currentLayer.activations = 1.0f / (1.0f + (-currentLayer.netInputs.array()).exp());
 
                 currentInputs = currentLayer.activations;
                 // printVector(currentLayer.activations);
@@ -124,37 +131,19 @@ class Network {
         void backwardPass(const float η, const VectorXf& target, const VectorXf& inputs) {
             int layerAmount = layers.size();
 
-            int maxNeurons = 0;
-            for (const auto& layer : layers) {
-                maxNeurons = std::max(maxNeurons, layer->neuronAmount);
-            }
-            VectorXf weightedDeltas(maxNeurons);
-            VectorXf sigmoidDerivs(maxNeurons);
-            
             for (int l = layerAmount - 1; l >= 0; l--) {
                 Layer& currentLayer = *(layers[l]);
                 int neuronAmount = currentLayer.neuronAmount;
-
-                if (sigmoidDerivs.size() != neuronAmount && weightedDeltas.size() != neuronAmount) {
-                    sigmoidDerivs.resize(neuronAmount);
-                    weightedDeltas.resize(neuronAmount);
-                }
                     
                 if (l == layerAmount-1) {
-                    sigmoidDerivs = currentLayer.netInputs.unaryExpr([](float x) {
-                        float s = 1.0f / (1.0f + std::exp(-x));
-                        return s * (1.0f - s);
-                    });
-                    currentLayer.deltas = sigmoidDerivs.array() * (target.array() - currentLayer.activations.array());
+                    currentLayer.sigmoidDerivs = currentLayer.activations.array() * (1.0f - currentLayer.activations.array());
+                    currentLayer.deltas = currentLayer.sigmoidDerivs.array() * (target.array() - currentLayer.activations.array());
                 } else {
                     Layer& nextLayer = *(layers[l+1]);
-                    sigmoidDerivs = currentLayer.netInputs.unaryExpr([](float x) {
-                        float s = 1.0f / (1.0f + std::exp(-x));
-                        return s * (1.0f - s);
-                    });
+                    currentLayer.sigmoidDerivs = currentLayer.activations.array() * (1.0f - currentLayer.activations.array());
 
-                    weightedDeltas = nextLayer.weights.transpose() * nextLayer.deltas;
-                    currentLayer.deltas = sigmoidDerivs.array() * weightedDeltas.array();
+                    currentLayer.weightedDeltas = nextLayer.weights.transpose() * nextLayer.deltas;
+                    currentLayer.deltas = currentLayer.sigmoidDerivs.array() * currentLayer.weightedDeltas.array();
                 }
 
                 VectorXf prevActivations = (l == 0) ? inputs : layers[l-1]->activations;
@@ -164,13 +153,13 @@ class Network {
         }
 };
 
-void normalizeInto(VectorXf& vec, const std::vector<uint8_t>& input) {
+inline void normalizeInto(VectorXf& vec, const std::vector<uint8_t>& input) {
     for (int i = 0; i < input.size(); ++i) {
         vec[i] = static_cast<float>(input[i]) / 255.0f;
     }
 }
 
-VectorXf oneHotEncoding(uint8_t label, int outputAmount) {
+inline VectorXf oneHotEncoding(uint8_t label, int outputAmount) {
     VectorXf newVec = Eigen::VectorXf::Zero(outputAmount);
 
     if (label < outputAmount) {
@@ -180,19 +169,15 @@ VectorXf oneHotEncoding(uint8_t label, int outputAmount) {
     return newVec;
 }
 
-int argmax(const VectorXf& vec) {
+inline int argmax(const VectorXf& vec) {
     Eigen::Index maxIndex;
     vec.maxCoeff(&maxIndex);
     return static_cast<int>(maxIndex);
 }
 
-// function MSE_loss(expected, output, output_length)
-//     return sum((expected-output).*(expected-output)) / output_length
-// end
-
-float lossMSE(const VectorXf& expected, const VectorXf& output) {
+inline float lossMSE(const VectorXf& expected, const VectorXf& output) {
     if (expected.size() != output.size()) {
-        std::cout << "Invalid size output and expected in MSE calculation" << "\n";
+        std::cout << "Invalid size output and expected in MSE calculation" << std::endl;;
         return 0.0f;
     }
 
@@ -203,13 +188,92 @@ float lossMSE(const VectorXf& expected, const VectorXf& output) {
     return sum/output.size();
 }
 
-void testPerformance() {
-    auto dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>();
+// void testPerformance() {
+//     auto dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>();
 
-    std::cout << "Nbr of training images = " << dataset.training_images.size() << std::endl;
-    std::cout << "Nbr of training labels = " << dataset.training_labels.size() << std::endl;
-    std::cout << "Nbr of test images = " << dataset.test_images.size() << std::endl;
-    std::cout << "Nbr of test labels = " << dataset.test_labels.size() << std::endl;
+//     std::cout << "Nbr of training images = " << dataset.training_images.size() << std::endl;
+//     std::cout << "Nbr of training labels = " << dataset.training_labels.size() << std::endl;
+//     std::cout << "Nbr of test images = " << dataset.test_images.size() << std::endl;
+//     std::cout << "Nbr of test labels = " << dataset.test_labels.size() << std::endl;
+
+//     Layer hiddenLayer(256);
+//     Layer hiddenLayer2(256);
+//     Layer outputLayer(10);
+
+//     Network nn;
+
+//     const size_t inputLength = dataset.training_images[0].size();
+//     const size_t outputLength = outputLayer.neuronAmount;
+
+//     nn.layers.push_back(std::make_unique<Layer>(hiddenLayer));
+//     nn.layers.push_back(std::make_unique<Layer>(hiddenLayer2));
+//     nn.layers.push_back(std::make_unique<Layer>(outputLayer));
+
+//     nn.setWeights(inputLength);
+//     nn.setBiases();
+
+//     using clock = std::chrono::high_resolution_clock;
+
+//     long long totalNormalizeTime = 0;
+//     long long totalForwardTime = 0;
+//     long long totalLossTime = 0;
+//     long long totalBackwardTime = 0;
+//     long long labelTime = 0;
+
+//     VectorXf inputs(inputLength);
+//     float loss = 0.0f;
+//     int correctCount;
+
+//     for (int i = 0; i < 10; i++) {
+//         auto t1 = clock::now();
+//         normalizeInto(inputs, dataset.training_images[i]);
+//         auto t2 = clock::now();
+
+//         auto t8 = clock::now();
+//         uint8_t correctLabel = dataset.training_labels[i];
+//         VectorXf correctLabelArr = oneHotEncoding(correctLabel, outputLength);
+//         auto t9 = clock::now();
+
+//         auto t3 = clock::now();
+//         nn.forwardPass(inputs);
+//         auto t4 = clock::now();
+
+//         int predictedLabel = argmax(nn.layers[nn.layers.size()-1]->activations);
+        
+//         if (predictedLabel == correctLabel) {
+//             correctCount++;
+//         }
+
+//         auto t5 = clock::now();
+//         loss += lossMSE(correctLabelArr, nn.layers[nn.layers.size()-1]->activations);
+//         auto t6 = clock::now();
+
+//         nn.backwardPass(0.01f, correctLabelArr, inputs);
+//         auto t7 = clock::now();
+
+//         auto normalize_time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+//         auto forward_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
+//         auto loss_time = std::chrono::duration_cast<std::chrono::microseconds>(t6 - t5).count();
+//         auto backward_time = std::chrono::duration_cast<std::chrono::microseconds>(t7 - t6).count();
+//         auto label_time = std::chrono::duration_cast<std::chrono::microseconds>(t9 - t8).count();
+
+//         // Accumulate times in variables (declared outside the loop)
+//         totalNormalizeTime += normalize_time;
+//         totalForwardTime += forward_time;
+//         totalLossTime += loss_time;
+//         totalBackwardTime += backward_time;
+//         labelTime += label_time;
+//     }
+
+//     std::cout << "Normalization time (total): " << totalNormalizeTime << " us" << std::endl;;
+//     std::cout << "Forward pass time (total): " << totalForwardTime << " us" << std::endl;;
+//     std::cout << "Loss calculation time (total): " << totalLossTime << " us" << std::endl;;
+//     std::cout << "Backward pass time (total): " << totalBackwardTime << " us" << std::endl;;
+//     std::cout << "Label time (total): " << labelTime << " us" << std::endl;;
+// }
+
+void train() {
+    auto dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>();
 
     Layer hiddenLayer(256);
     Layer hiddenLayer2(256);
@@ -219,6 +283,8 @@ void testPerformance() {
 
     const size_t inputLength = dataset.training_images[0].size();
     const size_t outputLength = outputLayer.neuronAmount;
+    const float learningRate = 0.04f;
+    const int epoches = 5;
 
     nn.layers.push_back(std::make_unique<Layer>(hiddenLayer));
     nn.layers.push_back(std::make_unique<Layer>(hiddenLayer2));
@@ -227,123 +293,49 @@ void testPerformance() {
     nn.setWeights(inputLength);
     nn.setBiases();
 
-    using clock = std::chrono::high_resolution_clock;
-
-    long long totalNormalizeTime = 0;
-    long long totalForwardTime = 0;
-    long long totalLossTime = 0;
-    long long totalBackwardTime = 0;
-
     VectorXf inputs(inputLength);
     float loss = 0.0f;
     int correctCount;
 
+    for (int e = 0; e < epoches; e++) {
+        int correctCount = 0;
+        float loss = 0.0f;
+        auto start = std::chrono::high_resolution_clock::now();
 
-    for (int i = 0; i < 1; i++) {
-        auto t1 = clock::now();
-        normalizeInto(inputs, dataset.training_images[i]);
-        auto t2 = clock::now();
+        for (int i = 0; i < dataset.training_images.size(); i++) {
+            normalizeInto(inputs, dataset.training_images[i]);
+            
+            uint8_t correctLabel = dataset.training_labels[i];
+            VectorXf correctLabelArr = oneHotEncoding(correctLabel, outputLength);
+            
+            nn.forwardPass(inputs);
+            
+            int predictedLabel = argmax(nn.layers[nn.layers.size()-1]->activations);
+            if (predictedLabel == correctLabel) {
+                correctCount++;
+            }
 
-        uint8_t correctLabel = dataset.training_labels[i];
-        VectorXf correctLabelArr = oneHotEncoding(correctLabel, outputLength);
-
-        auto t3 = clock::now();
-        nn.forwardPass(inputs);
-        auto t4 = clock::now();
-
-        int predictedLabel = argmax(nn.layers[nn.layers.size()-1]->activations);
-        
-        if (predictedLabel == correctLabel) {
-            correctCount++;
+            loss += lossMSE(correctLabelArr, nn.layers[nn.layers.size()-1]->activations);
+            nn.backwardPass(learningRate, correctLabelArr, inputs);
         }
 
-        auto t5 = clock::now();
-        loss += lossMSE(correctLabelArr, nn.layers[nn.layers.size()-1]->activations);
-        auto t6 = clock::now();
-
-        nn.backwardPass(0.01f, correctLabelArr, inputs);
-        auto t7 = clock::now();
-
-        auto normalize_time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-        auto forward_time = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
-        auto loss_time = std::chrono::duration_cast<std::chrono::microseconds>(t6 - t5).count();
-        auto backward_time = std::chrono::duration_cast<std::chrono::microseconds>(t7 - t6).count();
-
-        // Accumulate times in variables (declared outside the loop)
-        totalNormalizeTime += normalize_time;
-        totalForwardTime += forward_time;
-        totalLossTime += loss_time;
-        totalBackwardTime += backward_time;
+        std::cout << "Loss: " <<loss/dataset.training_images.size() << "" << std::endl;
+        float accuracy = static_cast<float>(correctCount) / dataset.training_images.size();
+        std::cout << "Epoch " << e + 1 << " Accuracy: " << accuracy * 100.0f << "%" << std::endl;
+        // std::cout << "Loss: " <<loss/10000 << "" << std::endl;;
+        // float accuracy = static_cast<float>(correctCount) / 10000;
+        // std::cout << "Epoch " << e + 1 << " Accuracy: " << accuracy * 100.0f << "%" << std::endl;;
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+        std::cout << "Time taken: " << duration.count() << " seconds" << "" << std::endl;
     }
 
-    std::cout << "Normalization time (total): " << totalNormalizeTime << " us\n";
-    std::cout << "Forward pass time (total): " << totalForwardTime << " us\n";
-    std::cout << "Loss calculation time (total): " << totalLossTime << " us\n";
-    std::cout << "Backward pass time (total): " << totalBackwardTime << " us\n";
+    std::cout << "Ended" << "" << std::endl;
 }
 
 int main() {
-    testPerformance();
-    // auto dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>();
-
-    // std::cout << "Nbr of training images = " << dataset.training_images.size() << std::endl;
-    // std::cout << "Nbr of training labels = " << dataset.training_labels.size() << std::endl;
-    // std::cout << "Nbr of test images = " << dataset.test_images.size() << std::endl;
-    // std::cout << "Nbr of test labels = " << dataset.test_labels.size() << std::endl;
-
-    // Layer hiddenLayer(256);
-    // Layer hiddenLayer2(256);
-    // Layer outputLayer(10);
-
-    // Network nn;
-
-    // const size_t inputLength = dataset.training_images[0].size();
-    // const size_t outputLength = outputLayer.neuronAmount;
-
-    // nn.layers.push_back(std::make_unique<Layer>(hiddenLayer));
-    // nn.layers.push_back(std::make_unique<Layer>(hiddenLayer2));
-    // nn.layers.push_back(std::make_unique<Layer>(outputLayer));
-
-    // nn.setWeights(inputLength);
-    // nn.setBiases();
-
-    // VectorXf inputs(inputLength);
-    // float loss = 0.0f;
-    // int correctCount;
-
-    // for (int e = 0; e < 1; e++) {
-    //     int correctCount = 0;
-    //     float loss = 0.0f;
-    //     auto start = std::chrono::high_resolution_clock::now();
-
-    //     for (int i = 0; i < dataset.training_images.size(); i++) {
-    //         normalizeInto(inputs, dataset.training_images[i]);
-            
-    //         uint8_t correctLabel = dataset.training_labels[i];
-    //         VectorXf correctLabelArr = oneHotEncoding(correctLabel, outputLength);
-            
-    //         nn.forwardPass(inputs);
-            
-    //         int predictedLabel = argmax(nn.layers[nn.layers.size()-1]->activations);
-    //         if (predictedLabel == correctLabel) {
-    //             correctCount++;
-    //         }
-
-    //         loss += lossMSE(correctLabelArr, nn.layers[nn.layers.size()-1]->activations);
-    //         nn.backwardPass(0.01f, correctLabelArr, inputs);
-    //     }
-
-    //     std::cout << "Loss: " <<loss/dataset.training_images.size() << "\n";
-    //     float accuracy = static_cast<float>(correctCount) / dataset.training_images.size();
-    //     std::cout << "Epoch " << e + 1 << " Accuracy: " << accuracy * 100.0f << "%\n";
-    //     // std::cout << "Loss: " <<loss/10000 << "\n";
-    //     // float accuracy = static_cast<float>(correctCount) / 10000;
-    //     // std::cout << "Epoch " << e + 1 << " Accuracy: " << accuracy * 100.0f << "%\n";
-    //     auto end = std::chrono::high_resolution_clock::now();
-    //     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-    //     std::cout << "Time taken: " << duration.count() << " seconds" << "\n";
-    // }
-
-    // std::cout << "Ended" << "\n";
+    train();
     return 0;
 }
+
+#endif

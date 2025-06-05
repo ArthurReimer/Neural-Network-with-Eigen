@@ -4,7 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "C:\\Users\\arthu\\Documents\\ML-Cpp\\mnist\\include\\"
+                "C:\\Users\\arthu\\Documents\\ML-Cpp\\mnist\\include\\",
+                "C:\\Users\\arthu\\Documents\\ML-Cpp\\external\\eigen\\Eigen\\"
             ],
             "defines": [
                 "_DEBUG",
