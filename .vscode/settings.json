@@ -82,6 +82,7 @@
         "xtree": "cpp",
         "dense": "cpp",
         "alignedvector3": "cpp",
-        "cstdarg": "cpp"
+        "cstdarg": "cpp",
+        "core": "cpp"
     }
 }
