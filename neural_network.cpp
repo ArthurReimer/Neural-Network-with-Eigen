@@ -1,5 +1,3 @@
-#define EIGEN_DONT_PARALLELIZE
-
 #include <iostream>
 #include <cstdlib>
 #include <vector>
@@ -12,10 +10,14 @@
 #include <numeric>
 #include <cmath>
 #include "mnist/include/mnist/mnist_reader.hpp"
-#include "external/eigen/Eigen/Dense"
 using namespace std;
+
+#include "external/eigen/Eigen/Dense"
 using Eigen::MatrixXf;
 using Eigen::VectorXf;
+
+#include "activations.h"
+using namespace act;
 
 #ifndef EIGEN_CORE_H
 
@@ -93,7 +95,7 @@ class Network {
             int layerAmount = layers.size();
             std::random_device rd;
             std::mt19937 gen(rd());
-            std::uniform_real_distribution<> dist(-1.0, 1.0);
+            std::uniform_real_distribution<> dist(-0.5, 0.5);
             
             for (int l = 0; l < layerAmount; l++) {
                 Layer& currentLayer = *(layers[l]);
@@ -118,7 +120,7 @@ class Network {
             int layerAmount = layers.size();
             std::random_device rd;
             std::mt19937 gen(rd());
-            std::uniform_real_distribution<> dist(-1.0, 1.0);
+            std::uniform_real_distribution<> dist(-0.5, 0.5);
 
             for (int l = 0; l < layerAmount; l++) {
                 Layer& currentLayer = *(layers[l]);
@@ -140,27 +142,27 @@ class Network {
 
                 currentLayer.netInputs = currentLayer.weights * currentInputs;
                 currentLayer.netInputs.colwise() += currentLayer.biases;
-                currentLayer.activations = 1.0f / (1.0f + (-currentLayer.netInputs).array().exp());
+                currentLayer.activations = act::sigmoid(currentLayer.netInputs);
 
                 currentInputs = currentLayer.activations;
             }
         }
 
-        // // Backwardpass calculation
+        // Backwardpass calculation
         void backwardPass(const float η, const MatrixXf& target, const MatrixXf& inputs) {
             int layerAmount = layers.size();
+            Eigen::setNbThreads(1);
 
             for (int l = layerAmount - 1; l >= 0; l--) {
                 Layer& currentLayer = *(layers[l]);
                 int neuronAmount = currentLayer.neuronAmount;
-                    
+                currentLayer.sigmoidDerivs = act::derivSigmoid(currentLayer.activations);
+                
                 if (l == layerAmount-1) {
-                    currentLayer.sigmoidDerivs = currentLayer.activations.array() * (1.0f - currentLayer.activations.array());
                     currentLayer.deltas = currentLayer.sigmoidDerivs.array() * (target.array() - currentLayer.activations.array());
                 } else {
                     Layer& nextLayer = *(layers[l+1]);
-                    currentLayer.sigmoidDerivs = currentLayer.activations.array() * (1.0f - currentLayer.activations.array());
-
+                    
                     currentLayer.weightedDeltas = nextLayer.weights.transpose() * nextLayer.deltas;
                     currentLayer.deltas = currentLayer.sigmoidDerivs.array() * currentLayer.weightedDeltas.array();
                 }
@@ -277,7 +279,7 @@ void train() {
 }
 
 int main() {
-    Eigen::setNbThreads(1);
+    Eigen::setNbThreads(4);
     std::cout << "Program started\n";
     train();
     std::cout << "Training finished\n";
