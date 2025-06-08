@@ -133,28 +133,35 @@ class Network {
                 int cols = (l == 0) ? inputLength : layers[l-1]->neuronAmount;
                 int rows = currentLayer.neuronAmount;
 
-                std::uniform_real_distribution<> dist;
+                currentLayer.weights = MatrixXf(rows, cols);
+                
 
                 switch (currentLayer.activationFunction) {
-                    case RELU:
-                        dist = std::uniform_real_distribution<>(0.0, std::sqrt(2.0 / cols));
+                    case RELU: {
+                        std::normal_distribution<float> dist(0.0, std::sqrt(2.0 / cols));
                         std::cout << "Using relu weight distribution" << endl;
+
+                        for (int r = 0; r < rows; ++r) {
+                            for (int c = 0; c < cols; ++c) {
+                                currentLayer.weights(r, c) = dist(gen);
+                            } 
+                        }
                         break;
-                    case SIGMOID:
-                        dist = std::uniform_real_distribution<>(-0.5, 0.5);
+                    }
+                    case SIGMOID: {
+                        std::uniform_real_distribution<> dist(-0.5, 0.5);
                         std::cout << "Using sigmoid weight distribution" << endl;
+
+                        for (int r = 0; r < rows; ++r) {
+                            for (int c = 0; c < cols; ++c) {
+                                currentLayer.weights(r, c) = dist(gen);
+                            } 
+                        }
                         break;
+                    }
                     default:
                         std::cout << "Invalid activation function given at layer " << l << "." << endl;
                         exit(0);
-                }
-                
-                currentLayer.weights = MatrixXf(rows, cols);
-
-                for (int r = 0; r < rows; ++r) {
-                    for (int c = 0; c < cols; ++c) {
-                        currentLayer.weights(r, c) = dist(gen);
-                    } 
                 }
             }
         }
@@ -352,9 +359,9 @@ void train() {
     // Constants
     const int inputLength = dataset.training_images[0].size();
     const int outputLength = 10;
-    const float learningRate = 0.004f;
+    const float learningRate = 0.006f;
     const int batchSize = 10;
-    const int epoches = 30;
+    const int epoches = 20;
 
     // Mutable variables
     MatrixXf inputs;
@@ -366,7 +373,7 @@ void train() {
     Network nn(batchSize);
     nn.addLayer(16, RELU);
     nn.addLayer(16, RELU);
-    nn.addLayer(outputLength, RELU);
+    nn.addLayer(outputLength, SIGMOID);
     nn.setup(inputLength);
 
     for (int e = 0; e < epoches; e++) {
