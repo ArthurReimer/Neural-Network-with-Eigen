@@ -15,17 +15,22 @@ typedef Eigen::MatrixXf mat;
 All activations functions for the network
 */
 namespace act {
+    enum actFunction {
+        RELU,
+        SIGMOID,
+    };
+
     /*
     Sigmoid activation function
     */
-    mat sigmoid(mat netInputs) {
+    mat sigmoid(const mat netInputs) {
         return 1.0f / (1.0f + (-netInputs).array().exp());
     }
 
     /*
     Sigmoid derivative activation function
     */
-    mat derivSigmoid(mat activations) {
+    mat derivSigmoid(const mat activations) {
         return activations.array() * (1.0f - activations.array());
     }
 
@@ -34,15 +39,15 @@ namespace act {
     Goes through all values and sets negatives to zeros
     */
     mat relu(mat netInputs) {
-        return netInputs.cwiseMax(0);
+        return netInputs.cwiseMax(0.0f);
     }
-
+    
     /*
     Relu derivative activation function
     Converts boolean value to float with .cast
     */
-    mat derivRelu(mat activations) {
-        return (activations.array() > 0).cast<float>();
+    mat derivRelu(const mat netInputs) {
+        return (netInputs.array() > 0).cast<float>();
     }
 }
 

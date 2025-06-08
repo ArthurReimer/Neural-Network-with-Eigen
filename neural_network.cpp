@@ -10,6 +10,7 @@
 #include <numeric>
 #include <cmath>
 #include <thread>
+#include <string>
 #include "mnist/include/mnist/mnist_reader.hpp"
 using namespace std;
 
@@ -59,16 +60,19 @@ class Layer {
         MatrixXf activations;
         MatrixXf netInputs;
         MatrixXf deltas;
-        MatrixXf sigmoidDerivs;
+        MatrixXf derivActivations;
         MatrixXf weightedDeltas;
+        act::actFunction activationFunction;
+        
 
-        Layer(int n, int batchSize) : neuronAmount(n),
+        Layer(int n, int batchSize, act::actFunction actFunc) : neuronAmount(n),
             biases(VectorXf::Zero(n)),
             activations(MatrixXf::Zero(n, batchSize)),
             netInputs(MatrixXf::Zero(n, batchSize)),
             deltas(MatrixXf::Zero(n, batchSize)),
-            sigmoidDerivs(MatrixXf::Zero(n, batchSize)),
-            weightedDeltas(MatrixXf::Zero(n, batchSize)) {}
+            derivActivations(MatrixXf::Zero(n, batchSize)),
+            weightedDeltas(MatrixXf::Zero(n, batchSize)),
+            activationFunction(actFunc){}
 };
 
 /*
@@ -99,8 +103,8 @@ class Network {
         Pushes an layer to layers
         Input layer is implicit
         */
-        void addLayer(const int n) {
-            this->layers.push_back(std::make_unique<Layer>(n, batchSize));
+        void addLayer(const int n, const act::actFunction actFunc) {
+            this->layers.push_back(std::make_unique<Layer>(n, batchSize, actFunc));
         }
 
 
@@ -122,16 +126,29 @@ class Network {
             int layerAmount = layers.size();
             std::random_device rd;
             std::mt19937 gen(rd());
-            std::uniform_real_distribution<> dist(-0.5, 0.5);
-            
+
             for (int l = 0; l < layerAmount; l++) {
                 Layer& currentLayer = *(layers[l]);
-
-                int cols = (l == 0)
-                    ? inputLength
-                    : layers[l-1]->neuronAmount;
+                
+                int cols = (l == 0) ? inputLength : layers[l-1]->neuronAmount;
                 int rows = currentLayer.neuronAmount;
-        
+
+                std::normal_distribution<float> dist;
+
+                switch (currentLayer.activationFunction) {
+                    case RELU:
+                        dist = std::normal_distribution<float>(0.0, std::sqrt(2.0 / cols));
+                        std::cout << "Using relu weight distribution" << endl;
+                        break;
+                    case SIGMOID:
+                        dist = std::normal_distribution<float>(-0.5, 0.5);
+                        std::cout << "Using sigmoid weight distribution" << endl;
+                        break;
+                    default:
+                        std::cout << "Invalid activation function given at layer " << l << "." << endl;
+                        exit(0);
+                }
+                
                 currentLayer.weights = MatrixXf(rows, cols);
 
                 for (int r = 0; r < rows; ++r) {
@@ -150,11 +167,27 @@ class Network {
             int layerAmount = layers.size();
             std::random_device rd;
             std::mt19937 gen(rd());
-            std::uniform_real_distribution<> dist(-0.5, 0.5);
+
 
             for (int l = 0; l < layerAmount; l++) {
                 Layer& currentLayer = *(layers[l]);
                 std::vector<float> biases(currentLayer.neuronAmount);
+
+                std::normal_distribution<float> dist;
+
+                switch (currentLayer.activationFunction) {
+                    case RELU:
+                        dist = std::normal_distribution<float>(0.0, 0.5);
+                        std::cout << "Using relu bias distribution" << endl;
+                        break;
+                    case SIGMOID:
+                        dist = std::normal_distribution<float>(-0.5, 0.5);
+                        std::cout << "Using sigmoid bias distribution" << endl;
+                        break;
+                    default:
+                        std::cout << "Invalid activation function given at layer " << l << "." << endl;
+                        exit(0);
+                }
 
                 for (int n = 0; n < currentLayer.neuronAmount; ++n) {
                     currentLayer.biases(n) = dist(gen);
@@ -188,15 +221,35 @@ class Network {
                 currentLayer.netInputs.colwise() += currentLayer.biases;
 
                 /*
-                Activations are calculated using sigmoid. In the future there should be more options
+                Activation calculation
                 */
-                currentLayer.activations = act::sigmoid(currentLayer.netInputs);
-
+                switch (currentLayer.activationFunction) {
+                    case RELU:
+                        currentLayer.activations = act::relu(currentLayer.netInputs);
+                        break;
+                    case SIGMOID:
+                        currentLayer.activations = act::sigmoid(currentLayer.netInputs);
+                        break;
+                    default:
+                        std::cout << "Invalid activation function given at layer " << l << "." << endl;
+                        exit(0);
+                }
+                
                 /*
                 Updating the current inputs for the next layer
                 */
                 currentInputs = currentLayer.activations;
+
+                if (l == layers.size() - 1) {
+                    std::cout << "Output layer activations range: "
+                            << currentLayer.activations.minCoeff() << " to "
+                            << currentLayer.activations.maxCoeff() << std::endl;
+
+                    std::cout << "Output layer deltas norm: "
+                            << currentLayer.deltas.norm() << std::endl;
+}
             }
+
         }
 
         /*
@@ -221,14 +274,25 @@ class Network {
                 /*
                 Calculating all the derivative activations for the current layer
                 */
-                currentLayer.sigmoidDerivs = act::derivSigmoid(currentLayer.activations);
+                switch (currentLayer.activationFunction) {
+                    case RELU:
+                        currentLayer.derivActivations = act::derivRelu(currentLayer.netInputs);
+                        break;
+                    case SIGMOID:
+                        currentLayer.derivActivations = act::derivSigmoid(currentLayer.activations);
+                        break;
+                    default:
+                        std::cout << "Invalid activation function given at layer " << l << "." << endl;
+                        exit(0);
+                }
                 
+                                
                 if (l == layerAmount-1) {
                     /*
                     Output layer delta (gradient) calculation
                     .array() has to be used for element wise calculation
                     */
-                    currentLayer.deltas = currentLayer.sigmoidDerivs.array() * (target.array() - currentLayer.activations.array());
+                    currentLayer.deltas = currentLayer.derivActivations.array() * (target.array() - currentLayer.activations.array());
                 } else {
                     /*
                     Hidden layer delta (gradient) calculation
@@ -239,7 +303,7 @@ class Network {
                     Layer& nextLayer = *(layers[l+1]);
                     
                     currentLayer.weightedDeltas = nextLayer.weights.transpose() * nextLayer.deltas;
-                    currentLayer.deltas = currentLayer.sigmoidDerivs.array() * currentLayer.weightedDeltas.array();
+                    currentLayer.deltas = currentLayer.derivActivations.array() * currentLayer.weightedDeltas.array();
                 }
 
                 /*
@@ -251,7 +315,14 @@ class Network {
                 */
                 MatrixXf prevActivations = (l == 0) ? inputs : layers[l-1]->activations;
                 currentLayer.biases += η * currentLayer.deltas.rowwise().mean();
+
+
+                // std::cout << "Layer " << l << " deltas.norm(): " << currentLayer.deltas.norm() << std::endl;
+                // std::cout << "Layer " << l << " weights.norm() BEFORE: " << currentLayer.weights.norm() << std::endl;
+
                 currentLayer.weights.noalias() += η * currentLayer.deltas * prevActivations.transpose().eval() / batchSize;
+
+                // std::cout << "Layer " << l << " weights.norm() AFTER: " << currentLayer.weights.norm() << std::endl;
             }
 
             /*
@@ -298,9 +369,9 @@ void train() {
     // Constants
     const int inputLength = dataset.training_images[0].size();
     const int outputLength = 10;
-    const float learningRate = 0.06f;
-    const int batchSize = 8;
-    const int epoches = 5;
+    const float learningRate = 0.01f;
+    const int batchSize = 10;
+    const int epoches = 30;
 
     // Mutable variables
     MatrixXf inputs;
@@ -310,9 +381,9 @@ void train() {
 
     // Network Setup
     Network nn(batchSize);
-    nn.addLayer(258);
-    nn.addLayer(258);
-    nn.addLayer(outputLength);
+    nn.addLayer(32, SIGMOID);
+    nn.addLayer(32, SIGMOID);
+    nn.addLayer(outputLength, SIGMOID);
     nn.setup(inputLength);
 
     for (int e = 0; e < epoches; e++) {
@@ -338,6 +409,7 @@ void train() {
 
             // Get output from last layer
             const MatrixXf& predictions = nn.layers.back()->activations;
+            // printVector(predictions.row(0));
 
             // Compute batch loss
             epochLoss += lossMSE(targets, predictions);
@@ -351,8 +423,12 @@ void train() {
                 }
             }
 
+            
             // Backpropagation
             nn.backwardPass(learningRate, targets, inputs);
+            // printVector(predictions.row(0));
+
+            // exit(0);
         }
 
         float avgLoss = epochLoss / numBatches;
@@ -363,6 +439,8 @@ void train() {
                 << " | Loss: " << avgLoss
                 << " | Accuracy: " << std::fixed << std::setprecision(2) << (accuracy * 100.0f) << "%"
                 << " | Time taken: " << duration.count() << " seconds" << "" << std::endl;
+
+
     }
 
     // Test the trained nn
@@ -381,7 +459,7 @@ void train() {
         int actual = dataset.test_labels[i];
 
         if (predicted == actual) {
-            ++correctTestPredictions;
+            correctTestPredictions++;
         }
     }
 
