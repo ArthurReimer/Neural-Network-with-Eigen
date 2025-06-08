@@ -38,7 +38,7 @@ namespace act {
     Relu activation function
     Goes through all values and sets negatives to zeros
     */
-    mat relu(mat netInputs) {
+    mat relu(const mat netInputs) {
         return netInputs.cwiseMax(0.0f);
     }
     

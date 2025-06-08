@@ -133,15 +133,15 @@ class Network {
                 int cols = (l == 0) ? inputLength : layers[l-1]->neuronAmount;
                 int rows = currentLayer.neuronAmount;
 
-                std::normal_distribution<float> dist;
+                std::uniform_real_distribution<> dist;
 
                 switch (currentLayer.activationFunction) {
                     case RELU:
-                        dist = std::normal_distribution<float>(0.0, std::sqrt(2.0 / cols));
+                        dist = std::uniform_real_distribution<>(0.0, std::sqrt(2.0 / cols));
                         std::cout << "Using relu weight distribution" << endl;
                         break;
                     case SIGMOID:
-                        dist = std::normal_distribution<float>(-0.5, 0.5);
+                        dist = std::uniform_real_distribution<>(-0.5, 0.5);
                         std::cout << "Using sigmoid weight distribution" << endl;
                         break;
                     default:
@@ -173,15 +173,15 @@ class Network {
                 Layer& currentLayer = *(layers[l]);
                 std::vector<float> biases(currentLayer.neuronAmount);
 
-                std::normal_distribution<float> dist;
+                std::uniform_real_distribution<> dist;
 
                 switch (currentLayer.activationFunction) {
                     case RELU:
-                        dist = std::normal_distribution<float>(0.0, 0.5);
+                        dist = std::uniform_real_distribution<>(0.0, 0.5);
                         std::cout << "Using relu bias distribution" << endl;
                         break;
                     case SIGMOID:
-                        dist = std::normal_distribution<float>(-0.5, 0.5);
+                        dist = std::uniform_real_distribution<>(-0.5, 0.5);
                         std::cout << "Using sigmoid bias distribution" << endl;
                         break;
                     default:
@@ -239,17 +239,7 @@ class Network {
                 Updating the current inputs for the next layer
                 */
                 currentInputs = currentLayer.activations;
-
-                if (l == layers.size() - 1) {
-                    std::cout << "Output layer activations range: "
-                            << currentLayer.activations.minCoeff() << " to "
-                            << currentLayer.activations.maxCoeff() << std::endl;
-
-                    std::cout << "Output layer deltas norm: "
-                            << currentLayer.deltas.norm() << std::endl;
-}
             }
-
         }
 
         /*
@@ -369,7 +359,7 @@ void train() {
     // Constants
     const int inputLength = dataset.training_images[0].size();
     const int outputLength = 10;
-    const float learningRate = 0.01f;
+    const float learningRate = 0.004f;
     const int batchSize = 10;
     const int epoches = 30;
 
@@ -381,9 +371,9 @@ void train() {
 
     // Network Setup
     Network nn(batchSize);
-    nn.addLayer(32, SIGMOID);
-    nn.addLayer(32, SIGMOID);
-    nn.addLayer(outputLength, SIGMOID);
+    nn.addLayer(16, RELU);
+    nn.addLayer(16, RELU);
+    nn.addLayer(outputLength, RELU);
     nn.setup(inputLength);
 
     for (int e = 0; e < epoches; e++) {
