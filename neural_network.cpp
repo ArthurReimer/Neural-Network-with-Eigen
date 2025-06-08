@@ -305,14 +305,7 @@ class Network {
                 */
                 MatrixXf prevActivations = (l == 0) ? inputs : layers[l-1]->activations;
                 currentLayer.biases += η * currentLayer.deltas.rowwise().mean();
-
-
-                // std::cout << "Layer " << l << " deltas.norm(): " << currentLayer.deltas.norm() << std::endl;
-                // std::cout << "Layer " << l << " weights.norm() BEFORE: " << currentLayer.weights.norm() << std::endl;
-
                 currentLayer.weights.noalias() += η * currentLayer.deltas * prevActivations.transpose().eval() / batchSize;
-
-                // std::cout << "Layer " << l << " weights.norm() AFTER: " << currentLayer.weights.norm() << std::endl;
             }
 
             /*
@@ -416,9 +409,6 @@ void train() {
             
             // Backpropagation
             nn.backwardPass(learningRate, targets, inputs);
-            // printVector(predictions.row(0));
-
-            // exit(0);
         }
 
         float avgLoss = epochLoss / numBatches;
