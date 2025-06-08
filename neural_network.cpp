@@ -107,7 +107,6 @@ class Network {
             this->layers.push_back(std::make_unique<Layer>(n, batchSize, actFunc));
         }
 
-
         /*
         Setup of biases and weights
         Should only be executed once
@@ -205,7 +204,6 @@ class Network {
         /*
         Forwardpass calculation through all layers of the network.
         Inputs is a type of matrix so that batching is possible.
-
         */
         void forwardPass(const MatrixXf& inputs) {
             /*
@@ -361,7 +359,7 @@ void train() {
     const int outputLength = 10;
     const float learningRate = 0.006f;
     const int batchSize = 10;
-    const int epoches = 20;
+    const int epochs = 30;
 
     // Mutable variables
     MatrixXf inputs;
@@ -376,7 +374,7 @@ void train() {
     nn.addLayer(outputLength, SIGMOID);
     nn.setup(inputLength);
 
-    for (int e = 0; e < epoches; e++) {
+    for (int e = 0; e < epochs; e++) {
         int numBatches = dataset.training_images.size() / batchSize;
         float epochLoss = 0.0f;
         int correctPredictions = 0;
@@ -422,7 +420,7 @@ void train() {
         float accuracy = static_cast<float>(correctPredictions) / (numBatches * batchSize);
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-        std::cout << "Epoch " << (e + 1) << "/" << epoches
+        std::cout << "Epoch " << (e + 1) << "/" << epochs
                 << " | Loss: " << avgLoss
                 << " | Accuracy: " << std::fixed << std::setprecision(2) << (accuracy * 100.0f) << "%"
                 << " | Time taken: " << duration.count() << " seconds" << "" << std::endl;
