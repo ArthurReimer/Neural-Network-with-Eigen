@@ -138,7 +138,7 @@ class Network {
                 switch (currentLayer.activationFunction) {
                     case RELU: {
                         std::normal_distribution<float> dist(0.0, std::sqrt(2.0 / cols));
-                        std::cout << "Using relu weight distribution" << endl;
+                        std::cout << "Using relu weight distribution in layer " << l << endl;
 
                         for (int r = 0; r < rows; ++r) {
                             for (int c = 0; c < cols; ++c) {
@@ -149,7 +149,7 @@ class Network {
                     }
                     case SIGMOID: {
                         std::uniform_real_distribution<> dist(-0.5, 0.5);
-                        std::cout << "Using sigmoid weight distribution" << endl;
+                        std::cout << "Using sigmoid weight distribution in layer " << l << endl;
 
                         for (int r = 0; r < rows; ++r) {
                             for (int c = 0; c < cols; ++c) {
@@ -160,7 +160,7 @@ class Network {
                     }
                     case LEAKY_RELU: {
                         std::normal_distribution<float> dist(0.0, std::sqrt(2.0 / cols));
-                        std::cout << "Using leaky relu weight distribution" << endl;
+                        std::cout << "Using leaky relu weight distribution in layer " << l << endl;
 
                         for (int r = 0; r < rows; ++r) {
                             for (int c = 0; c < cols; ++c) {
@@ -195,15 +195,15 @@ class Network {
                 switch (currentLayer.activationFunction) {
                     case RELU:
                         dist = std::uniform_real_distribution<>(0.0, 0.5);
-                        std::cout << "Using relu bias distribution" << endl;
+                        std::cout << "Using relu bias distribution in layer " << l  << endl;
                         break;
                     case SIGMOID:
                         dist = std::uniform_real_distribution<>(-0.5, 0.5);
-                        std::cout << "Using sigmoid bias distribution" << endl;
+                        std::cout << "Using sigmoid bias distribution in layer " << l  << endl;
                         break;
                     case LEAKY_RELU:
                         dist = std::uniform_real_distribution<>(0.0, 0.5);
-                        std::cout << "Using leaky relu bias distribution" << endl;
+                        std::cout << "Using leaky relu bias distribution in layer " << l  << endl;
                         break;
                     default:
                         std::cout << "Invalid activation function given at layer " << l << "." << endl;
