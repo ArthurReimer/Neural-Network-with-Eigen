@@ -138,7 +138,7 @@ class Network {
                 switch (currentLayer.activationFunction) {
                     case RELU: {
                         std::normal_distribution<float> dist(0.0, std::sqrt(2.0 / cols));
-                        std::cout << "Using relu weight distribution in layer " << l << endl;
+                        std::cout << "Using relu weight distribution for layer " << l << endl;
 
                         for (int r = 0; r < rows; ++r) {
                             for (int c = 0; c < cols; ++c) {
@@ -149,7 +149,7 @@ class Network {
                     }
                     case SIGMOID: {
                         std::uniform_real_distribution<> dist(-0.5, 0.5);
-                        std::cout << "Using sigmoid weight distribution in layer " << l << endl;
+                        std::cout << "Using sigmoid weight distribution for layer " << l << endl;
 
                         for (int r = 0; r < rows; ++r) {
                             for (int c = 0; c < cols; ++c) {
@@ -160,7 +160,7 @@ class Network {
                     }
                     case LEAKY_RELU: {
                         std::normal_distribution<float> dist(0.0, std::sqrt(2.0 / cols));
-                        std::cout << "Using leaky relu weight distribution in layer " << l << endl;
+                        std::cout << "Using leaky relu weight distribution for layer " << l << endl;
 
                         for (int r = 0; r < rows; ++r) {
                             for (int c = 0; c < cols; ++c) {
@@ -170,7 +170,7 @@ class Network {
                         break;
                     }
                     default:
-                        std::cout << "Invalid activation function given at layer " << l << "." << endl;
+                        std::cout << "Invalid activation function given for layer " << l << "." << endl;
                         exit(0);
                 }
             }
@@ -195,18 +195,18 @@ class Network {
                 switch (currentLayer.activationFunction) {
                     case RELU:
                         dist = std::uniform_real_distribution<>(0.0, 0.5);
-                        std::cout << "Using relu bias distribution in layer " << l  << endl;
+                        std::cout << "Using relu bias distribution for layer " << l  << endl;
                         break;
                     case SIGMOID:
                         dist = std::uniform_real_distribution<>(-0.5, 0.5);
-                        std::cout << "Using sigmoid bias distribution in layer " << l  << endl;
+                        std::cout << "Using sigmoid bias distribution for layer " << l  << endl;
                         break;
                     case LEAKY_RELU:
                         dist = std::uniform_real_distribution<>(0.0, 0.5);
-                        std::cout << "Using leaky relu bias distribution in layer " << l  << endl;
+                        std::cout << "Using leaky relu bias distribution for layer " << l  << endl;
                         break;
                     default:
-                        std::cout << "Invalid activation function given at layer " << l << "." << endl;
+                        std::cout << "Invalid activation function given for layer " << l << "." << endl;
                         exit(0);
                 }
 
@@ -254,7 +254,7 @@ class Network {
                         currentLayer.activations = act::leakyRelu(currentLayer.netInputs, 0.01);
                         break;
                     default:
-                        std::cout << "Invalid activation function given at layer " << l << "." << endl;
+                        std::cout << "Invalid activation function given for layer " << l << "." << endl;
                         exit(0);
                 }
                 
@@ -298,7 +298,7 @@ class Network {
                         currentLayer.derivActivations = act::derivLeakyRelu(currentLayer.netInputs, 0.01);
                         break;
                     default:
-                        std::cout << "Invalid activation function given at layer " << l << "." << endl;
+                        std::cout << "Invalid activation function given for layer " << l << "." << endl;
                         exit(0);
                 }
                 
@@ -380,7 +380,7 @@ void train() {
     const int outputLength = 10;
     const float learningRate = 0.009f;
     const int batchSize = 10;
-    const int epochs = 20;
+    const int epochs = 10;
 
     // Mutable variables
     MatrixXf inputs;
@@ -390,8 +390,8 @@ void train() {
 
     // Network Setup
     Network nn(batchSize);
-    nn.addLayer(16, LEAKY_RELU);
-    nn.addLayer(16, LEAKY_RELU);
+    nn.addLayer(32, LEAKY_RELU);
+    nn.addLayer(32, LEAKY_RELU);
     nn.addLayer(outputLength, LEAKY_RELU);
     nn.setup(inputLength);
 
