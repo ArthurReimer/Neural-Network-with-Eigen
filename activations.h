@@ -18,6 +18,7 @@ namespace act {
     enum actFunction {
         RELU,
         SIGMOID,
+        LEAKY_RELU,
     };
 
     /*
@@ -49,7 +50,23 @@ namespace act {
     mat derivRelu(const mat netInputs) {
         return (netInputs.array() > 0).cast<float>();
     }
-}
 
+    /*
+    Leaky relu activation function
+    It's similiar to relu, but it allows small negative value, which helps to prevent neurons from 'dying'
+    */
+    mat leakyRelu(const mat netInputs, const float α) {
+        return netInputs.cwiseMax(α * netInputs);
+    }
+
+    /*
+    Derivative leaky relu activation function
+    */
+    mat derivLeakyRelu(const mat netInputs, const float α) {
+        return netInputs.unaryExpr([α](float x) {
+            return (x > 0) ? 1.0f : α;
+        });
+    }
+}
 
 #endif
