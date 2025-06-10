@@ -53,7 +53,7 @@ namespace act {
 
     /*
     Leaky relu activation function
-    It's similiar to relu, but it allows small negative value, which helps to prevent neurons from 'dying'
+    It's similiar to relu, but it allows a small negative value, which helps to prevent neurons from 'dying'
     */
     mat leakyRelu(const mat netInputs, const float α) {
         return netInputs.cwiseMax(α * netInputs);
