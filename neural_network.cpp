@@ -104,7 +104,7 @@ class Network {
         Input layer is implicit
         */
         void addLayer(const int n, const act::actFunction actFunc) {
-            this->layers.push_back(std::make_unique<Layer>(n, batchSize, actFunc));
+            this->layers.push_back(std::make_unique<Layer>(n, this->batchSize, actFunc));
         }
 
         /*
@@ -122,12 +122,12 @@ class Network {
         Weights is a matrix of type float
         */
         void setWeights() {
-            int layerAmount = layers.size();
+            int layerAmount = this->layers.size();
             std::random_device rd;
             std::mt19937 gen(rd());
 
             for (int l = 0; l < layerAmount; l++) {
-                Layer& currentLayer = *(layers[l]);
+                Layer& currentLayer = *(this->layers[l]);
                 
                 int cols = (l == 0) ? inputLength : layers[l-1]->neuronAmount;
                 int rows = currentLayer.neuronAmount;
@@ -187,7 +187,7 @@ class Network {
 
 
             for (int l = 0; l < layerAmount; l++) {
-                Layer& currentLayer = *(layers[l]);
+                Layer& currentLayer = *(this->layers[l]);
                 std::vector<float> biases(currentLayer.neuronAmount);
 
                 std::uniform_real_distribution<> dist;
@@ -230,7 +230,7 @@ class Network {
             Looping through all layers. All layers are depedent on eachother for the calculation
             */
             for (int l = 0; l < layers.size(); l++) {
-                Layer& currentLayer = *(layers[l]);
+                Layer& currentLayer = *(this->layers[l]);
                 int neuronAmount = currentLayer.neuronAmount;
 
                 /*
@@ -278,10 +278,10 @@ class Network {
             Disabling mutli threading by allowing a maxiumum of one thread.
             */
             Eigen::setNbThreads(1);
-            int layerAmount = layers.size();
+            int layerAmount = this->layers.size();
 
             for (int l = layerAmount - 1; l >= 0; l--) {
-                Layer& currentLayer = *(layers[l]);
+                Layer& currentLayer = *(this->layers[l]);
                 int neuronAmount = currentLayer.neuronAmount;
 
                 /*
@@ -316,7 +316,7 @@ class Network {
                     .array() has to be used for element wise calculation
                     "nextLayer" is the layer right to the current layer
                     */
-                    Layer& nextLayer = *(layers[l+1]);
+                    Layer& nextLayer = *(this->layers[l+1]);
                     
                     currentLayer.weightedDeltas = nextLayer.weights.transpose() * nextLayer.deltas;
                     currentLayer.deltas = currentLayer.derivActivations.array() * currentLayer.weightedDeltas.array();
