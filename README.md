@@ -37,7 +37,8 @@ int main() {
 ```
 ### Forwardpass + backwardpass
 To utilize the forward- and backwardpass you just have to call their function.
-Actual training example is located in the 'mnist_training' script. The following code is simplified
+Actual training example is located in the 'mnist_training' script. The following code is simplified to showcase the args.
+Inputs and targets is a Matrix because of batching. If batching would be set to one the matrix should only contain one input vector
 ``` Cpp 
 // ...
 
