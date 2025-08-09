@@ -11,6 +11,9 @@ Currently only a handful of activation functions are supported, but im planning 
 Because Eigen uses CPU mainly, GPU is not yet supported even though GPU would offer great performance benefits with multithreading and multiprocessing.
 ## Usage:
 ### Creating the network
+The input layer is implicit and is not represented by a layer.
+After all hidden layers/ouput layer have been added, the setup function __has__ to be called.
+
 ``` Cpp
 // ...
 
@@ -18,15 +21,16 @@ Because Eigen uses CPU mainly, GPU is not yet supported even though GPU would of
 
 int main() {
   // Defines how many input vectors get processed at the same time
-  const int batch_size = 10;
+  const int batchSize = 10;
+  const int inputLength = 784;
 
   // Creating the nn
-  NN::Network nn(batch_size);
+  NN::Network nn(batchSize);
 
   // Adding layers with neurons & activation function
-  nn.addLayer(32, LEAKY_RELU);
-  nn.addLayer(32, LEAKY_RELU);
-  nn.addLayer(outputLength, LEAKY_RELU);
+  nn.addLayer(16, LEAKY_RELU);
+  nn.addLayer(16, LEAKY_RELU);
+  nn.addLayer(10, LEAKY_RELU);
 
   // Mandatory setup function that has to be called after adding all layers
   nn.setup(inputLength);
@@ -47,10 +51,11 @@ Inputs and targets is a Matrix because of batching. If batching would be set to 
 
 int main() {
   // Defines how many input vectors get processed at the same time
-  const int batch_size = 10;
+  const int batchSize = 10;
+  const int inputLength = 784;
 
   // Creating the nn
-  NN::Network nn(batch_size);
+  NN::Network nn(batchSize);
 
   // Adding layers with neurons & activation function
   nn.addLayer(16, LEAKY_RELU);
@@ -74,6 +79,14 @@ int main() {
 ```
 
 ## Example output data on MNIST
+This network looked like this:
+Input layer size: 784
+Hidden layer 1 size: 32
+Hidden layer 2 size: 32
+Output layer size: 10
+Total weights: 25472
+
+
 ``` Cpp
 Program started
 Using leaky relu weight distribution for layer 0
