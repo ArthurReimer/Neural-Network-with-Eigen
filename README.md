@@ -1,6 +1,6 @@
 # C++ Neural Network with Eigen from scratch
 ##  Libraries:
-- MNIST
+- MNIST reader (MNIST data included)
 - Eigen
 - Standard Library (C++)
 ## Description:
@@ -38,7 +38,7 @@ int main() {
 ### Forwardpass + backwardpass
 To utilize the forward- and backwardpass you just have to call their function.
 Actual training example is located in the 'mnist_training' script. The following code is simplified to showcase the args.
-Inputs and targets is a Matrix because of batching. If batching would be set to one the matrix should only contain one input vector
+Inputs and targets is a Matrix because of batching. If batching would be set to one the matrix should only contain one input vector.
 ``` Cpp 
 // ...
 
@@ -71,4 +71,27 @@ int main() {
   return 0;
 }
 ```
+
+## Example output data on MNIST
+``` Cpp
+Program started
+Using leaky relu weight distribution for layer 0
+Using leaky relu weight distribution for layer 1
+Using leaky relu weight distribution for layer 2
+Using leaky relu bias distribution for layer 0
+Using leaky relu bias distribution for layer 1
+Using leaky relu bias distribution for layer 2
+Epoch 1/5 | Loss: 0.465728 | Accuracy: 64.64% | Time taken: 30 seconds
+Epoch 2/5 | Loss: 0.24 | Accuracy: 86.27% | Time taken: 30 seconds
+Epoch 3/5 | Loss: 0.15 | Accuracy: 92.80% | Time taken: 31 seconds
+Epoch 4/5 | Loss: 0.14 | Accuracy: 93.84% | Time taken: 30 seconds
+Epoch 5/5 | Loss: 0.13 | Accuracy: 94.29% | Time taken: 29 seconds
+Test Accuracy: 94.22%
+Training finished
+```
+## Problems
+Because Eigen doesn't support GPU the neural network struggles with performance, even though batching is implemented and efficent matrix calcuations are being used.
+That's why im planing to switch to CUDA for GPU support.
+## Summary
+Altough the performance is lagging behind, I could get the accuracy up to 94 to 96% accuracy consistently. The main purpose of this neural network was so that I could learn how to implement a neural network completely from scratch and to learn C++ as I have never had made a real project before in C++.
 
