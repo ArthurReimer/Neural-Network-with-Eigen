@@ -1,5 +1,5 @@
 # C++ Neural Network with Eigen from scratch
-##  Libraries:
+##  Libraries used:
 - MNIST reader (MNIST data included)
 - Eigen
 - Standard Library (C++)
