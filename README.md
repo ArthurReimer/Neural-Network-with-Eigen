@@ -79,14 +79,18 @@ int main() {
 ```
 
 ## Example output data on MNIST
-This network looked like this:
+### Network
+``` Cpp
+
 Input layer size: 784
 Hidden layer 1 size: 32
 Hidden layer 2 size: 32
 Output layer size: 10
 Total weights: 25472
+```
 
 
+### Output
 ``` Cpp
 Program started
 Using leaky relu weight distribution for layer 0
