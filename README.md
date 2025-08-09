@@ -1,9 +1,9 @@
 # C++ Neural Network with Eigen from scratch
-##  Libraries used:
+##  Libraries used
 - MNIST reader (MNIST data included)
 - Eigen
 - Standard Library (C++)
-## Description:
+## Description
 I made this simple neural network in C++ by utilizing Eigen's fast matrix & vector calculation.
 I chose to create a neural network from scratch in C++ so that I can better understand how these work and can learn actual performance & accuracy strategies.
 By making this project I gained lots of experience in both C++ (in which I've never had a real project in before) and neural networks .
