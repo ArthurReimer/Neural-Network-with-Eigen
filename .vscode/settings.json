@@ -1,4 +1,8 @@
 {
+    "editor.parameterHints.enabled": true,
+    "C_Cpp.inlayHints.parameterNames.enabled": true,
+    "C_Cpp.inlayHints.parameterNames.suppressWhenArgumentContainsName": false,
+    "C_Cpp.inlayHints.enabled": true,
     "files.associations": {
         "iostream": "cpp",
         "atomic": "cpp",
@@ -83,6 +87,6 @@
         "dense": "cpp",
         "alignedvector3": "cpp",
         "cstdarg": "cpp",
-        "core": "cpp"
+        "core": "cpp",
     }
 }
