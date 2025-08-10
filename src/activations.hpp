@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 
-#include "external/eigen/Eigen/Dense"
+#include <Eigen/Dense>
 using Eigen::MatrixXf;
 using Eigen::VectorXf;
 
@@ -54,16 +54,16 @@ namespace act {
     Leaky relu activation function
     It's similiar to relu, but it allows a small negative value, which helps to prevent neurons from 'dying'
     */
-    mat leakyRelu(const mat netInputs, const float α) {
-        return netInputs.cwiseMax(α * netInputs);
+    mat leakyRelu(const mat netInputs, const float alpha) {
+        return netInputs.cwiseMax(alpha * netInputs);
     }
 
     /*
     Derivative leaky relu activation function
     */
-    mat derivLeakyRelu(const mat netInputs, const float α) {
-        return netInputs.unaryExpr([α](float x) {
-            return (x > 0) ? 1.0f : α;
+    mat derivLeakyRelu(const mat netInputs, const float alpha) {
+        return netInputs.unaryExpr([alpha](float x) {
+            return (x > 0) ? 1.0f : alpha;
         });
     }
 }

@@ -15,16 +15,14 @@
 #include <thread>
 #include <string>
 
-// MNIST reader + MNIST data
-#include "mnist/include/mnist/mnist_reader.hpp"
+#include "mnist/mnist_reader.hpp"
 using namespace std;
 
-// Eigen
-#include "external/eigen/Eigen/Dense"
+#include <Eigen/Dense>
 using Eigen::MatrixXf;
 using Eigen::VectorXf;
 
-// Own activations header sccript
+// Activations header script
 #include "activations.hpp"
 using namespace act;
 
@@ -32,7 +30,10 @@ using namespace act;
 
 #ifndef EIGEN_CORE_H
 
+// Eigen not defined
+
 #else
+
 namespace NN {
     inline void printVector(const VectorXf& vec) {
         std::cout << "[";

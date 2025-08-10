@@ -1,3 +1,5 @@
+// Compile with: g++ mnist_training.cpp -I../src -I../external/eigen -I../external/mnist/include -std=c++17 -o mnist_training.exe
+
 #include "neural_network.hpp"
 
 inline void normalizeInto(Eigen::MatrixXf& mat, const std::vector<std::vector<uint8_t>>& input) {
@@ -32,7 +34,7 @@ inline float lossMSE(const MatrixXf& expected, const MatrixXf& output) {
 
 void train() {
     // MNIST dataset
-    auto dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>();
+    auto dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>("../external/mnist");
 
     // Constants
     const int inputLength = dataset.training_images[0].size();

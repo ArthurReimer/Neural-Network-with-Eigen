@@ -3,6 +3,9 @@
         {
             "name": "Win32",
             "includePath": [
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/external/eigen",
+                "${workspaceFolder}/external/mnist/include",
                 "${workspaceFolder}/**"
             ],
             "defines": [
