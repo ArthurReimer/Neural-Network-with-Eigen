@@ -1,5 +1,4 @@
-#ifndef NEURAL_NETWORK_H
-#define NEURAL_NETWORK_H
+#pragma once
 
 // Std library
 #include <iostream>
@@ -354,4 +353,3 @@ namespace NN {
 
 
 #endif // EIGEN_CORE_H
-#endif // NEURAL_NETWORK_H
