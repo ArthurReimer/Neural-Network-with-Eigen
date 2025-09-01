@@ -41,7 +41,7 @@ void train() {
     const int outputLength = 10;
     const float learningRate = 0.0095f;
     const int batchSize = 10;
-    const int epochs = 5;
+    const int epochs = 6;
 
     // Mutable variables
     MatrixXf inputs;

@@ -14,10 +14,12 @@
 #include <cmath>
 #include <thread>
 #include <string>
-
-#include "mnist/mnist_reader.hpp"
 using namespace std;
 
+// MNIST reader
+#include "mnist/mnist_reader.hpp"
+
+// Eigen for matrix & vector numerics
 #include <Eigen/Dense>
 using Eigen::MatrixXf;
 using Eigen::VectorXf;
@@ -26,11 +28,13 @@ using Eigen::VectorXf;
 #include "activations.hpp"
 using namespace act;
 
-
-
 #ifndef EIGEN_CORE_H
 
 // Eigen not defined
+int main() {
+    std::cout << "Eigen was not found! Program not executed\n";
+    return 0;
+}
 
 #else
 
@@ -57,7 +61,6 @@ namespace NN {
         std::cout << "]" << std::endl;
     }
 
-
     /*
     The layer class contains all of the important mutable variables like the weights and biases.
     Weights and biases are initialized after all the layers are pushed into the network and .setup() is called once.
@@ -66,6 +69,8 @@ namespace NN {
         public:
             int neuronAmount;
             MatrixXf weights;
+            // To avoid unecessarily create a new matrix each iteration
+            MatrixXf transposedWeights;
             VectorXf biases;
             MatrixXf activations;
             MatrixXf netInputs;
@@ -74,7 +79,6 @@ namespace NN {
             MatrixXf weightedDeltas;
             act::actFunction activationFunction;
             
-
             Layer(int n, int batchSize, act::actFunction actFunc) : neuronAmount(n),
                 biases(VectorXf::Zero(n)),
                 activations(MatrixXf::Zero(n, batchSize)),
@@ -104,13 +108,13 @@ namespace NN {
             int inputLength;
 
             /*
-            Constructor for the network object
+            Constructor for the network
             */
             Network(int b) : 
                 batchSize(b) {}
             
             /*
-            Pushes an layer to layers
+            Pushes a layer to layers
             Input layer is implicit
             */
             void addLayer(const int n, const act::actFunction actFunc) {
@@ -142,8 +146,8 @@ namespace NN {
                     int cols = (l == 0) ? inputLength : layers[l-1]->neuronAmount;
                     int rows = currentLayer.neuronAmount;
 
-                    currentLayer.weights = MatrixXf(rows, cols);
-                    
+                    currentLayer.weights = MatrixXf::Zero(rows, cols);
+                    currentLayer.transposedWeights = currentLayer.weights.transpose();
 
                     switch (currentLayer.activationFunction) {
                         case RELU: {
@@ -158,7 +162,8 @@ namespace NN {
                             break;
                         }
                         case SIGMOID: {
-                            std::uniform_real_distribution<> dist(-0.5, 0.5);
+                            float a = std::sqrt(6.0 / (rows + cols));
+                            std::uniform_real_distribution<> dist(-1.0*a, a);
                             std::cout << "Using sigmoid weight distribution for layer " << l << endl;
 
                             for (int r = 0; r < rows; ++r) {
@@ -283,7 +288,7 @@ namespace NN {
             Eigens threading has to be disabled by setting a max of one thread duo to threading problems when updating weights/biases.
             After the backwardpass is done the max thread size will be updated back to the original thread size.
             */
-            void backwardPass(const float η, const MatrixXf& target, const MatrixXf& inputs) {
+            void backwardPass(const float learning_rate, const MatrixXf& target, const MatrixXf& inputs) {
                 /*
                 Disabling mutli threading by allowing a maxiumum of one thread.
                 */
@@ -312,7 +317,6 @@ namespace NN {
                             exit(0);
                     }
                     
-                    
                     if (l == layerAmount-1) {
                         /*
                         Output layer delta (gradient) calculation
@@ -328,7 +332,8 @@ namespace NN {
                         */
                         Layer& nextLayer = *(this->layers[l+1]);
                         
-                        currentLayer.weightedDeltas = nextLayer.weights.transpose() * nextLayer.deltas;
+                        nextLayer.transposedWeights = nextLayer.weights.transpose();
+                        currentLayer.weightedDeltas = nextLayer.transposedWeights * nextLayer.deltas;
                         currentLayer.deltas = currentLayer.derivActivations.array() * currentLayer.weightedDeltas.array();
                     }
 
@@ -340,8 +345,8 @@ namespace NN {
                     Duo to inputs being implicit, the previous layer at the index 0 would require the inputs argument instead of the previous layer
                     */
                     MatrixXf prevActivations = (l == 0) ? inputs : layers[l-1]->activations;
-                    currentLayer.biases += η * currentLayer.deltas.rowwise().mean();
-                    currentLayer.weights.noalias() += η * currentLayer.deltas * prevActivations.transpose().eval() / batchSize;
+                    currentLayer.biases += learning_rate * currentLayer.deltas.rowwise().mean();
+                    currentLayer.weights.noalias() += learning_rate * currentLayer.deltas * prevActivations.transpose().eval() / batchSize;
                 }
 
                 /*
@@ -351,6 +356,5 @@ namespace NN {
             }
     };
 }
-
 
 #endif // EIGEN_CORE_H

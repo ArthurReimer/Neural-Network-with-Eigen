@@ -44,7 +44,6 @@ namespace act {
     
     /*
     Relu derivative activation function
-    Converts boolean value to float with .cast
     */
     mat derivRelu(const mat netInputs) {
         return (netInputs.array() > 0).cast<float>();
