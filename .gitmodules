@@ -1,7 +1,6 @@
 [submodule "external/eigen"]
 	path = external/eigen
 	url = https://github.com/eigenteam/eigen-git-mirror.git
-
 [submodule "external/mnist"]
 	path = external/mnist
 	url = https://github.com/wichtounet/mnist.git
