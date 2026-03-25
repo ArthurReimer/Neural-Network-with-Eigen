@@ -80,7 +80,7 @@ int main() {
 
 ## Example output data on MNIST
 ### Network
-``` Cpp
+``` console
 
 Input layer size: 784
 Hidden layer 1 size: 32
@@ -91,7 +91,7 @@ Total weights: 25472
 
 
 ### Output
-``` Cpp
+``` console
 Program started
 Using leaky relu weight distribution for layer 0
 Using leaky relu weight distribution for layer 1
