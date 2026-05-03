@@ -6,9 +6,9 @@
 ## Description
 I made this simple neural network in C++ by utilizing Eigen's fast matrix & vector calculation.
 I chose to create a neural network from scratch in C++ so that I can better understand how these work and can learn actual performance & accuracy strategies.
-By making this project I gained lots of experience in both C++ (in which I've never had a real project in before) and neural networks .
-Currently only a handful of activation functions are supported, but im planning on adding more for the future.
-Because Eigen uses CPU mainly, GPU is not yet supported even though GPU would offer great performance benefits with multithreading and multiprocessing.
+By making this project I gained lots of experience in both C++ (in which I've never had a real project before) and neural networks.
+Currently only a handful of activation functions are supported, but I'm planning on adding more in the future.
+Because Eigen uses the CPU mainly, GPU is not yet supported, even though GPU would offer great performance benefits with multithreading and multiprocessing.
 ## Usage:
 ### Creating the network
 The input layer is implicit and is not represented by a layer.
@@ -106,8 +106,8 @@ Test Accuracy: 94.22%
 Training finished
 ```
 ## Problems
-Because Eigen doesn't support GPU the neural network struggles with performance, even though batching is implemented and efficent matrix calcuations are being used.
+Because Eigen doesn't support GPU, the neural network struggles with performance, even though batching is implemented and efficient matrix calculations are being used.
+That's why I'm planning to switch to CUDA for GPU support.
 That's why im planing to switch to CUDA for GPU support.
 ## Summary
-Altough the performance is lagging behind, I could get the accuracy up to 94 to 96% accuracy consistently. The main purpose of this neural network was so that I could learn how to implement a neural network completely from scratch and to learn C++ as I have never had made a real project before in C++.
-
+Although the performance is lagging behind, I could get the accuracy up to 94 to 96% consistently. The main purpose of this neural network was so that I could learn how to implement a neural network completely from scratch and to learn C++, as I had never made a real project in C++ before.
