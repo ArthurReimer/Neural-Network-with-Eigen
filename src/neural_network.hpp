@@ -69,7 +69,7 @@ namespace NN {
         public:
             int neuronAmount;
             MatrixXf weights;
-            // To avoid unecessarily create a new matrix each iteration
+            // To avoid unecessarily creating a new matrix each iteration
             MatrixXf transposedWeights;
             VectorXf biases;
             MatrixXf activations;
