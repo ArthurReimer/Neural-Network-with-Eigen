@@ -1,25 +1,37 @@
-// Compile with: g++ mnist_training.cpp -I../src -I../external/eigen -I../external/mnist/include -std=c++17 -o mnist_training.exe
+// Compile with: g++ -O3 -fopenmp mnist_training.cpp -I../src -I../external/eigen -I../external/mnist/include -std=c++17 -o mnist_training.exe 2>&1
 
 #include "neural_network.hpp"
 
-inline void normalizeInto(Eigen::MatrixXf& mat, const std::vector<std::vector<uint8_t>>& input) {
-    const int rows = mat.rows();
-    const int cols = mat.cols();
+class Timer {
+    public:
+        std::chrono::steady_clock::time_point startTime;
 
-    for (int col = 0; col < cols; ++col) {
-        for (int row = 0; row < rows; ++row) {
-            mat(row, col) = static_cast<float>(input[col][row]) / 255.0f;
-        }
+    void startTimer() {
+        startTime = std::chrono::steady_clock::now();
     }
+
+    void endTimerMilliseconds() {
+        std::chrono::steady_clock::time_point endTime = std::chrono::steady_clock::now();
+        std::cout << "Elapsed time: " << std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() << "ms\n";
+    }
+
+    void endTimerSeconds() {
+        std::chrono::steady_clock::time_point endTime = std::chrono::steady_clock::now();
+        std::cout << "Elapsed time: " << std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count() << "sec\n";
+    }
+};
+
+
+using VectorXu8 = Eigen::Matrix<uint8_t, Eigen::Dynamic, 1>;
+
+inline void normalizeInto(Eigen::VectorXf& vec, const std::vector<uint8_t>& input) {
+    vec = Eigen::Map<const VectorXu8>(input.data(), input.size()).cast<float>() / 255.0f;
 }
 
-inline MatrixXf oneHotEncoding(vector<uint8_t> label, int outputAmount, const int batchSize) {
-    MatrixXf newMat = Eigen::MatrixXf::Zero(outputAmount, batchSize);
-
-    for (int i = 0; i < batchSize; i++) {
-        newMat(label[i],i) = 1.0f;
-    }
-    return newMat;
+inline MatrixXf oneHotEncoding(uint8_t label, int outputAmount) {
+    VectorXf vec = VectorXf::Zero(outputAmount);
+    vec(label) = 1;
+    return vec;
 }
 
 inline int argmax(const VectorXf& vec) {
@@ -36,105 +48,58 @@ void train() {
     // MNIST dataset
     auto dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>("../external/mnist");
 
+    
+
     // Constants
     const int inputLength = dataset.training_images[0].size();
     const int outputLength = 10;
-    const float learningRate = 0.0095f;
-    const int batchSize = 10;
-    const int epochs = 6;
+    const int epochs = 100;
 
-    // Mutable variables
-    MatrixXf inputs;
-    inputs.resize(784, batchSize);
-    std::vector<std::vector<uint8_t>> rawInputs;
-    std::vector<uint8_t> labels(batchSize);
+    double learningRate = 0.0005;
 
     // Network Setup
-    NN::Network nn(batchSize);
-    nn.addLayer(32, LEAKY_RELU);
-    nn.addLayer(32, LEAKY_RELU);
-    nn.addLayer(outputLength, LEAKY_RELU);
-    nn.setup(inputLength);
+    NeuralNetwork nn(inputLength);
+    nn.addLayer(128, LEAKY_RELU);
+    nn.addLayer(128, LEAKY_RELU);
+    nn.addLayer(outputLength, SIGMOID);
+
+    VectorXf inputs(inputLength);
+    
+    Timer timer = Timer();
+    timer.startTimer();
+
+    std::cout << "Neural Network Model" << "\n"
+            << "  Denselayer amount - " << nn.layers.size() << "\n"
+            << "  Weight amount - " << nn.getWeightAmount() << "\n"
+            << "  Bias amount - " << nn.getBiasAmount() << "\n\n";
+
+    std::cout << "Starting Training" << "\n";
+
 
     for (int e = 0; e < epochs; e++) {
-        int numBatches = dataset.training_images.size() / batchSize;
-        float epochLoss = 0.0f;
-        int correctPredictions = 0;
-        auto start = std::chrono::high_resolution_clock::now();
+        int correct = 0;
+        for (int i = 0; i < dataset.training_images.size(); i++) {
+            
+            normalizeInto(inputs, dataset.training_images[i]);
+            nn.forwardpass(inputs);
 
-        for (int b = 0; b < numBatches; b++) {
-            rawInputs.clear();
-
-            for (int i = 0; i < batchSize; i++) {
-                int index = b * batchSize + i;
-                rawInputs.push_back(dataset.training_images[index]);
-                labels[i] = dataset.training_labels[index];
+            int label = static_cast<int>(dataset.training_labels[i]);
+            int prediction = argmax(nn.layers[nn.layers.size()-1].activations);
+            if (prediction == label) {
+                correct += 1;
             }
 
-            normalizeInto(inputs, rawInputs);
-            MatrixXf targets = oneHotEncoding(labels, outputLength, batchSize);
 
-            // Forwardpass
-            nn.forwardPass(inputs);
-
-            // Get output from last layer
-            const MatrixXf& predictions = nn.layers.back()->activations;
-
-            // Compute batch loss
-            epochLoss += lossMSE(targets, predictions);
-
-            // Compute accuracy
-            for (int i = 0; i < batchSize; i++) {
-                VectorXf col = predictions.col(i);
-                int predicted = argmax(col);
-                if (predicted == labels[i]) {
-                    correctPredictions++;
-                }
-            }
-
-            // Backpropagation
-            nn.backwardPass(learningRate, targets, inputs);
+            VectorXf target = oneHotEncoding(label, outputLength);
+            nn.backpropagation(inputs, learningRate, target);
         }
-
-        float avgLoss = epochLoss / numBatches;
-        float accuracy = static_cast<float>(correctPredictions) / (numBatches * batchSize);
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-        std::cout << "Epoch " << (e + 1) << "/" << epochs
-                << " | Loss: " << avgLoss
-                << " | Accuracy: " << std::fixed << std::setprecision(2) << (accuracy * 100.0f) << "%"
-                << " | Time taken: " << duration.count() << " seconds" << "" << std::endl;
+        float accuracy = static_cast<float>(correct) / dataset.training_images.size();
+        std::cout << "Epoch " << e+1 <<" Accuracy: " << std::fixed << std::setprecision(2) << (accuracy * 100.0f) << "% ";
+        timer.endTimerSeconds();
     }
-
-    // Test the trained nn
-    int correctTestPredictions = 0;
-    const int testSize = dataset.test_images.size();
-    MatrixXf testInput(784, 1);
-
-    for (int i = 0; i < testSize; ++i) {
-        for (int j = 0; j < 784; ++j) {
-            testInput(j, 0) = static_cast<float>(dataset.test_images[i][j]) / 255.0f;
-        }
-
-        nn.forwardPass(testInput);
-        const MatrixXf& output = nn.layers.back()->activations;
-        int predicted = argmax(output.col(0));
-        int actual = dataset.test_labels[i];
-
-        if (predicted == actual) {
-            correctTestPredictions++;
-        }
-    }
-
-    float testAccuracy = static_cast<float>(correctTestPredictions) / testSize;
-    std::cout << "Test Accuracy: " << std::fixed << std::setprecision(2)
-              << testAccuracy * 100.0f << "%" << std::endl;
 }
 
 int main() {
-    Eigen::setNbThreads(12);
-    std::cout << "Program started\n";
     train();
-    std::cout << "Training finished\n";
     return 0;
 }

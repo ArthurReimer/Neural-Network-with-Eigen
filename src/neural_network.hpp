@@ -1,6 +1,6 @@
 #pragma once
 
-// Std library
+
 #include <iostream>
 #include <cstdlib>
 #include <vector>
@@ -14,347 +14,220 @@
 #include <cmath>
 #include <thread>
 #include <string>
-using namespace std;
 
-// MNIST reader
-#include "mnist/mnist_reader.hpp"
 
-// Eigen for matrix & vector numerics
+#include "activations.hpp"
+using namespace Activations;
+
+
 #include <Eigen/Dense>
 using Eigen::MatrixXf;
 using Eigen::VectorXf;
 
-// Activations header script
-#include "activations.hpp"
-using namespace act;
+#include "mnist/mnist_reader.hpp"
 
-#ifndef EIGEN_CORE_H
+// type defs
+using WeightMatrix = Eigen::MatrixXf;
+using BiasVector = Eigen::VectorXf;
+using ActivationVector = Eigen::VectorXf;
+using NetinputVector = Eigen::VectorXf;
+using GradientVector = Eigen::VectorXf;
+using InputVector = Eigen::VectorXf;
+using Activation = Activations::activationFunction;
 
-// Eigen not defined
-int main() {
-    std::cout << "Eigen was not found! Program not executed\n";
-    return 0;
+
+void printMatrix(Eigen::MatrixXf mat) {
+    std::cout << "{" << "\n";
+    for (int row = 0; row < mat.rows(); row++) {
+        std::cout << "{";
+        for (int col = 0; col < mat.cols(); col++) {
+            std::cout << mat(row, col) << " ";
+        }
+        std::cout << "}" << "\n";
+    }
+    std::cout << "}" << "\n";
 }
 
-#else
-
-namespace NN {
-    inline void printVector(const VectorXf& vec) {
-        std::cout << "[";
-        for (int i = 0; i < vec.size(); i++) {
-            std::cout << std::fixed << std::setprecision(4) << vec[i];
-            if (i != vec.size() - 1) {
-                std::cout << ", ";
-            }
-        }
-        std::cout << "]" << std::endl;
+void printVector(Eigen::VectorXf vec) {
+    std::cout << "{";
+    for (int i = 0; i < vec.size(); i++) {
+        std::cout << vec(i) << " ";
     }
-
-    inline void printVector_uint8_t(const std::vector<uint8_t>& vec) {
-        std::cout << "[";
-        for (size_t i = 0; i < vec.size(); ++i) {
-            std::cout << static_cast<int>(vec[i]);
-            if (i != vec.size() - 1) {
-                std::cout << ", ";
-            }
-        }
-        std::cout << "]" << std::endl;
-    }
-
-    /*
-    The layer class contains all of the important mutable variables like the weights and biases.
-    Weights and biases are initialized after all the layers are pushed into the network and .setup() is called once.
-    */
-    class Layer {
-        public:
-            int neuronAmount;
-            MatrixXf weights;
-            // To avoid unecessarily creating a new matrix each iteration
-            MatrixXf transposedWeights;
-            VectorXf biases;
-            MatrixXf activations;
-            MatrixXf netInputs;
-            MatrixXf deltas;
-            MatrixXf derivActivations;
-            MatrixXf weightedDeltas;
-            act::actFunction activationFunction;
-            
-            Layer(int n, int batchSize, act::actFunction actFunc) : neuronAmount(n),
-                biases(VectorXf::Zero(n)),
-                activations(MatrixXf::Zero(n, batchSize)),
-                netInputs(MatrixXf::Zero(n, batchSize)),
-                deltas(MatrixXf::Zero(n, batchSize)),
-                derivActivations(MatrixXf::Zero(n, batchSize)),
-                weightedDeltas(MatrixXf::Zero(n, batchSize)),
-                activationFunction(actFunc){}
-    };
-
-    /*
-    The network class is the neural network. It contains all of the layers and most of the logic.
-    .addLayer pushes a new layer into the Network. This is the meant way to add another layer to the network.
-    After all layers were pushed into the neural network, .setup() should be called once to create all the weights and biases.
-    Not doing so results in undefined behaviours.
-    Currently no multithreaded batching is implemented, only batching, and no GPU support is implemented yet.
-    */
-    class Network {
-        public:
-            /*
-            Input layer is implicit, not defined explicitly
-            Layers is a vector of smart pointers(unique_ptrs)
-            */
-
-            std::vector<std::unique_ptr<Layer>> layers;
-            const int batchSize;
-            int inputLength;
-
-            /*
-            Constructor for the network
-            */
-            Network(int b) : 
-                batchSize(b) {}
-            
-            /*
-            Pushes a layer to layers
-            Input layer is implicit
-            */
-            void addLayer(const int n, const act::actFunction actFunc) {
-                this->layers.push_back(std::make_unique<Layer>(n, this->batchSize, actFunc));
-            }
-
-            /*
-            Setup of biases and weights
-            Should only be executed once
-            */
-            void setup(const int inputLen) {
-                inputLength = inputLen;
-                this->setWeights();
-                this->setBiases();
-            }
-
-            /*
-            Setting random starting weights
-            Weights is a matrix of type float
-            */
-            void setWeights() {
-                int layerAmount = this->layers.size();
-                std::random_device rd;
-                std::mt19937 gen(rd());
-
-                for (int l = 0; l < layerAmount; l++) {
-                    Layer& currentLayer = *(this->layers[l]);
-                    
-                    int cols = (l == 0) ? inputLength : layers[l-1]->neuronAmount;
-                    int rows = currentLayer.neuronAmount;
-
-                    currentLayer.weights = MatrixXf::Zero(rows, cols);
-                    currentLayer.transposedWeights = currentLayer.weights.transpose();
-
-                    switch (currentLayer.activationFunction) {
-                        case RELU: {
-                            std::normal_distribution<float> dist(0.0, std::sqrt(2.0 / cols));
-                            std::cout << "Using relu weight distribution for layer " << l << endl;
-
-                            for (int r = 0; r < rows; ++r) {
-                                for (int c = 0; c < cols; ++c) {
-                                    currentLayer.weights(r, c) = dist(gen);
-                                } 
-                            }
-                            break;
-                        }
-                        case SIGMOID: {
-                            float a = std::sqrt(6.0 / (rows + cols));
-                            std::uniform_real_distribution<> dist(-1.0*a, a);
-                            std::cout << "Using sigmoid weight distribution for layer " << l << endl;
-
-                            for (int r = 0; r < rows; ++r) {
-                                for (int c = 0; c < cols; ++c) {
-                                    currentLayer.weights(r, c) = dist(gen);
-                                } 
-                            }
-                            break;
-                        }
-                        case LEAKY_RELU: {
-                            std::normal_distribution<float> dist(0.0, std::sqrt(2.0 / cols));
-                            std::cout << "Using leaky relu weight distribution for layer " << l << endl;
-
-                            for (int r = 0; r < rows; ++r) {
-                                for (int c = 0; c < cols; ++c) {
-                                    currentLayer.weights(r, c) = dist(gen);
-                                } 
-                            }
-                            break;
-                        }
-                        default:
-                            std::cout << "Invalid activation function given for layer " << l << "." << endl;
-                            exit(0);
-                    }
-                }
-            }
-
-            /*
-            Setting random starting biases.
-            Biases is a vector of type float.
-            */
-            void setBiases() {
-                int layerAmount = layers.size();
-                std::random_device rd;
-                std::mt19937 gen(rd());
-
-
-                for (int l = 0; l < layerAmount; l++) {
-                    Layer& currentLayer = *(this->layers[l]);
-                    std::vector<float> biases(currentLayer.neuronAmount);
-
-                    std::uniform_real_distribution<> dist;
-
-                    switch (currentLayer.activationFunction) {
-                        case RELU:
-                            dist = std::uniform_real_distribution<>(0.0, 0.5);
-                            std::cout << "Using relu bias distribution for layer " << l  << endl;
-                            break;
-                        case SIGMOID:
-                            dist = std::uniform_real_distribution<>(-0.5, 0.5);
-                            std::cout << "Using sigmoid bias distribution for layer " << l  << endl;
-                            break;
-                        case LEAKY_RELU:
-                            dist = std::uniform_real_distribution<>(0.0, 0.5);
-                            std::cout << "Using leaky relu bias distribution for layer " << l  << endl;
-                            break;
-                        default:
-                            std::cout << "Invalid activation function given for layer " << l << "." << endl;
-                            exit(0);
-                    }
-
-                    for (int n = 0; n < currentLayer.neuronAmount; ++n) {
-                        currentLayer.biases(n) = dist(gen);
-                    }
-                }
-            }
-
-            /*
-            Forwardpass calculation through all layers of the network.
-            Inputs is a type of matrix so that batching is possible.
-            */
-            void forwardPass(const MatrixXf& inputs) {
-                /*
-                Current inputs is changed after the layer calcuation so that the next layer already has their inputs
-                */
-                MatrixXf currentInputs = inputs;
-
-                /*
-                Looping through all layers. All layers are depedent on eachother for the calculation
-                */
-                for (int l = 0; l < layers.size(); l++) {
-                    Layer& currentLayer = *(this->layers[l]);
-                    int neuronAmount = currentLayer.neuronAmount;
-
-                    /*
-                    Calcuation of the net inputs for the current layer
-                    Inorder for the dimensions to align with the weighted inputs and the biases, column wise addition is required (colwise())
-                    */
-                    currentLayer.netInputs = currentLayer.weights * currentInputs;
-                    currentLayer.netInputs.colwise() += currentLayer.biases;
-
-                    /*
-                    Activation calculation
-                    */
-                    switch (currentLayer.activationFunction) {
-                        case RELU :
-                            currentLayer.activations = act::relu(currentLayer.netInputs);
-                            break;
-                        case SIGMOID:
-                            currentLayer.activations = act::sigmoid(currentLayer.netInputs);
-                            break;
-                        case LEAKY_RELU:
-                            currentLayer.activations = act::leakyRelu(currentLayer.netInputs, 0.01);
-                            break;
-                        default:
-                            std::cout << "Invalid activation function given for layer " << l << "." << endl;
-                            exit(0);
-                    }
-                    
-                    /*
-                    Updating the current inputs for the next layer
-                    */
-                    currentInputs = currentLayer.activations;
-                }
-            }
-
-            /*
-            Backwardpass calculation through all layers of the network at reverse.
-            Inputs is a type of matrix so that batching can be used and multiple inputs can be calculated in one chunk.
-            η is the learning rate of the backwardpass.
-            
-            Eigens threading has to be disabled by setting a max of one thread duo to threading problems when updating weights/biases.
-            After the backwardpass is done the max thread size will be updated back to the original thread size.
-            */
-            void backwardPass(const float learning_rate, const MatrixXf& target, const MatrixXf& inputs) {
-                /*
-                Disabling mutli threading by allowing a maxiumum of one thread.
-                */
-                Eigen::setNbThreads(1);
-                int layerAmount = this->layers.size();
-
-                for (int l = layerAmount - 1; l >= 0; l--) {
-                    Layer& currentLayer = *(this->layers[l]);
-                    int neuronAmount = currentLayer.neuronAmount;
-
-                    /*
-                    Calculating all the derivative activations for the current layer
-                    */
-                    switch (currentLayer.activationFunction) {
-                        case RELU:
-                            currentLayer.derivActivations = act::derivRelu(currentLayer.netInputs);
-                            break;
-                        case SIGMOID:
-                            currentLayer.derivActivations = act::derivSigmoid(currentLayer.activations);
-                            break;
-                        case LEAKY_RELU:
-                            currentLayer.derivActivations = act::derivLeakyRelu(currentLayer.netInputs, 0.01);
-                            break;
-                        default:
-                            std::cout << "Invalid activation function given for layer " << l << "." << endl;
-                            exit(0);
-                    }
-                    
-                    if (l == layerAmount-1) {
-                        /*
-                        Output layer delta (gradient) calculation
-                        .array() has to be used for element wise calculation
-                        */
-                        currentLayer.deltas = currentLayer.derivActivations.array() * (target.array() - currentLayer.activations.array());
-                    } else {
-                        /*
-                        Hidden layer delta (gradient) calculation
-                        Dereferencing the next layer smart pointer
-                        .array() has to be used for element wise calculation
-                        "nextLayer" is the layer right to the current layer
-                        */
-                        Layer& nextLayer = *(this->layers[l+1]);
-                        
-                        nextLayer.transposedWeights = nextLayer.weights.transpose();
-                        currentLayer.weightedDeltas = nextLayer.transposedWeights * nextLayer.deltas;
-                        currentLayer.deltas = currentLayer.derivActivations.array() * currentLayer.weightedDeltas.array();
-                    }
-
-                    /*
-                    Updating all biases & weights for the current layer
-                    .noalias speeds up the weight updating significantly
-                    Because the backwardpass uses batching, the weights gradient has to be divided by the batch size
-                    "previous" is refering to the layer left of the current layer.
-                    Duo to inputs being implicit, the previous layer at the index 0 would require the inputs argument instead of the previous layer
-                    */
-                    MatrixXf prevActivations = (l == 0) ? inputs : layers[l-1]->activations;
-                    currentLayer.biases += learning_rate * currentLayer.deltas.rowwise().mean();
-                    currentLayer.weights.noalias() += learning_rate * currentLayer.deltas * prevActivations.transpose().eval() / batchSize;
-                }
-
-                /*
-                Setting back the max thread count
-                */
-                Eigen::setNbThreads(12);
-            }
-    };
+    std::cout << "}" <<  "\n";
 }
 
-#endif // EIGEN_CORE_H
+class DenseLayer {
+    public:
+        size_t neuronAmount;
+        size_t inputNeuronAmount;
+        WeightMatrix weights;
+        BiasVector biases;
+        ActivationVector activations;
+        ActivationVector derivActivations;
+        NetinputVector netinputs;
+        GradientVector gradients;
+        GradientVector weightedGradients;
+        Activation activation;
+
+
+    DenseLayer(size_t inputNeuronAmount, size_t neuronAmount, Activation activationFunc) :
+        neuronAmount(neuronAmount),
+        inputNeuronAmount(inputNeuronAmount),
+        biases(VectorXf::Zero(neuronAmount)),
+        activations(ActivationVector::Zero(neuronAmount)),
+        derivActivations(ActivationVector::Zero(neuronAmount)),
+        netinputs(NetinputVector::Zero(neuronAmount)),
+        gradients(GradientVector::Zero(neuronAmount)),
+        weightedGradients(GradientVector::Zero(neuronAmount)),
+        weights(WeightMatrix::Zero(neuronAmount, inputNeuronAmount)),
+        activation(activationFunc)
+        {
+            this->generateRandomWeights();
+            this->generateRandomBiases();
+        }
+
+
+    void generateRandomWeights() {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+
+        float stddev = (activation == RELU || activation == LEAKY_RELU)
+            ? std::sqrt(2.0f / inputNeuronAmount)
+            : std::sqrt(2.0f / (inputNeuronAmount + neuronAmount));
+        std::normal_distribution<float> dist(0.0f, stddev);
+
+        for (int r = 0; r < neuronAmount; ++r) {
+            for (int c = 0; c < inputNeuronAmount; ++c) {
+                this->weights(r, c) = dist(gen);
+            } 
+        }
+    }
+
+
+    void generateRandomBiases() {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<float> dist(0.0f, 0.1f);
+
+        for (int r = 0; r < neuronAmount; ++r) {
+            this->biases(r) = dist(gen);
+        }
+    }
+};
+
+class NeuralNetwork {
+    public:
+        size_t inputLength;
+        std::vector<DenseLayer> layers;
+
+    NeuralNetwork(size_t inputLength) 
+    : inputLength(inputLength) {}
+
+
+    void addLayer(size_t neuronAmount, Activation activationFunc) {
+        if (layers.empty()) {
+            this->layers.push_back(DenseLayer(this->inputLength, neuronAmount, activationFunc));
+        } else {
+            size_t ind = layers.size()-1;
+            this->layers.push_back(DenseLayer(this->layers[ind].neuronAmount, neuronAmount, activationFunc));
+        }
+    }
+
+
+    void displayLayers() {
+        for (size_t layerInd = 0; layerInd < this->layers.size(); layerInd++) {
+            DenseLayer &layer = this->layers[layerInd];
+            std::cout << "Dense layer " << layerInd << "\n";
+            std::cout << "- Weight size " << layer.weights.size() << "\n";
+            std::cout << "- Input length " << layer.inputNeuronAmount << "\n";
+            std::cout << "- Neuron amount " << layer.neuronAmount << "\n";
+        }
+    }
+
+
+    void forwardpass(InputVector &inputs, bool debug = false) {
+        for (size_t layerInd = 0; layerInd < this->layers.size(); layerInd++) {
+            DenseLayer &layer = this->layers[layerInd];
+            // activations of the layer left of the current layer "layer"
+            ActivationVector& previousActivations = (layerInd == 0) ? inputs : this->layers[layerInd - 1].activations; 
+            layer.netinputs.noalias() = (layer.weights * previousActivations).colwise() + layer.biases;
+            
+            switch (layer.activation) {
+                case RELU: {
+                    layer.activations = Activations::reluVec(layer.netinputs);
+                    break;
+                }
+                case LEAKY_RELU: {
+                    layer.activations = Activations::leakyReluVec(layer.netinputs, 0.001f);
+                    break;
+                }
+                case SIGMOID: {
+                    layer.activations = Activations::sigmoidVec(layer.netinputs);
+                    break;
+                }
+                default:
+                    std::cout << "Invalid activation function " << layer.activation << " for layer " << layerInd << "." << endl;
+                    exit(0);
+            }
+
+            if (debug) {
+                std::cout << "Netinputs";
+                printVector(layer.netinputs);
+                std::cout << "\n" << "Activations";
+                printVector(layer.activations);
+            }
+        } 
+    }
+
+
+    void backpropagation(InputVector &inputs, double learningRate, Eigen::VectorXf target, bool debug = false) {
+        for (int l = this->layers.size() - 1; l >= 0; l--) {
+            DenseLayer &layer = this->layers[l];
+                
+            switch (layer.activation) {
+                case RELU: {
+                    layer.derivActivations = Activations::derivReluVec(layer.netinputs);
+                    break;
+                }
+                case LEAKY_RELU: {
+                    layer.derivActivations = Activations::derivLeakyReluVec(layer.netinputs, 0.001f);
+                    break;
+                }
+                case SIGMOID: {
+                    layer.derivActivations = Activations::derivSigmoidVec(layer.activations);
+                    break;
+                }
+                default:
+                    std::cout << "Invalid activation function " << layer.activation << " for layer " << l << "." << endl;
+                    exit(0);
+            }
+
+            if (l == this->layers.size() - 1) {
+                layer.gradients = layer.derivActivations.array() * (layer.activations.array() - target.array());
+            } else {
+                DenseLayer &rightLayer = this->layers[l+1];
+                layer.gradients = layer.derivActivations.array() * (rightLayer.weights.transpose() * rightLayer.gradients).array();
+            }
+
+            VectorXf &activationsLayerLeft = (l == 0) ? inputs : layers[l - 1].activations;
+            layer.biases.noalias() -= learningRate * layer.gradients;
+            layer.weights.noalias() -= learningRate * layer.gradients * activationsLayerLeft.transpose();
+        }
+    }
+
+    size_t getWeightAmount() {
+        size_t weights = 0;
+        for (DenseLayer layer : this->layers) {
+            weights += layer.weights.size();
+        }
+        return weights;
+    }
+
+    size_t getBiasAmount() {
+        size_t biases = 0;
+        for (DenseLayer layer : this->layers) {
+            biases += layer.biases.size();
+        }
+        return biases;
+    }
+};
