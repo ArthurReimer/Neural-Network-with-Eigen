@@ -95,31 +95,26 @@ Neural Network Model
   Bias amount - 266
 
 Starting Training
-Epoch 1 Accuracy: 71.47% Elapsed time: 1sec
-Epoch 2 Accuracy: 88.52% Elapsed time: 3sec
-Epoch 3 Accuracy: 90.35% Elapsed time: 4sec
-Epoch 4 Accuracy: 91.36% Elapsed time: 6sec
-Epoch 5 Accuracy: 92.08% Elapsed time: 8sec
-Epoch 6 Accuracy: 92.59% Elapsed time: 10sec
-Epoch 7 Accuracy: 93.07% Elapsed time: 12sec
-Epoch 8 Accuracy: 93.45% Elapsed time: 17sec
-Epoch 9 Accuracy: 93.74% Elapsed time: 21sec
-Epoch 10 Accuracy: 94.01% Elapsed time: 26sec
-Epoch 11 Accuracy: 94.24% Elapsed time: 30sec
-Epoch 12 Accuracy: 94.47% Elapsed time: 34sec
-Epoch 13 Accuracy: 94.65% Elapsed time: 39sec
-Epoch 14 Accuracy: 94.84% Elapsed time: 42sec
-Epoch 15 Accuracy: 95.00% Elapsed time: 44sec
-Epoch 16 Accuracy: 95.12% Elapsed time: 45sec
-Epoch 17 Accuracy: 95.27% Elapsed time: 47sec
-Epoch 18 Accuracy: 95.40% Elapsed time: 49sec
-Epoch 19 Accuracy: 95.54% Elapsed time: 50sec
-Epoch 20 Accuracy: 95.66% Elapsed time: 52sec
-Epoch 21 Accuracy: 95.76% Elapsed time: 54sec
-Epoch 22 Accuracy: 95.89% Elapsed time: 56sec
-Epoch 23 Accuracy: 96.00% Elapsed time: 59sec
-Epoch 24 Accuracy: 96.11% Elapsed time: 61sec
-Epoch 25 Accuracy: 96.19% Elapsed time: 63sec
-Epoch 26 Accuracy: 96.27% Elapsed time: 65sec
+Epoch 1 Accuracy: 70.61% Elapsed time: 1sec
+Epoch 2 Accuracy: 88.25% Elapsed time: 3sec
+Epoch 3 Accuracy: 90.24% Elapsed time: 4sec
+Epoch 4 Accuracy: 91.22% Elapsed time: 6sec
+Epoch 5 Accuracy: 91.94% Elapsed time: 7sec
+Epoch 6 Accuracy: 92.49% Elapsed time: 9sec
+Epoch 7 Accuracy: 92.92% Elapsed time: 11sec
+Epoch 8 Accuracy: 93.32% Elapsed time: 12sec
+Epoch 9 Accuracy: 93.65% Elapsed time: 13sec
+Epoch 10 Accuracy: 93.94% Elapsed time: 15sec
+Epoch 11 Accuracy: 94.20% Elapsed time: 16sec
+Epoch 12 Accuracy: 94.43% Elapsed time: 18sec
+Epoch 13 Accuracy: 94.65% Elapsed time: 19sec
+Epoch 14 Accuracy: 94.86% Elapsed time: 21sec
+Epoch 15 Accuracy: 95.03% Elapsed time: 22sec
+Epoch 16 Accuracy: 95.19% Elapsed time: 25sec
+Epoch 17 Accuracy: 95.33% Elapsed time: 27sec
+Epoch 18 Accuracy: 95.46% Elapsed time: 29sec
+Epoch 19 Accuracy: 95.60% Elapsed time: 32sec
+Epoch 20 Accuracy: 95.72% Elapsed time: 35sec
 [...]
+Epoch 100 Accuracy: 98.83% Elapsed time: 194sec
 ```
