@@ -19,12 +19,15 @@
 #include "activations.hpp"
 using namespace Activations;
 
+#pragma GCC push_options
+#pragma GCC optimize("O0")
+#include "mnist/mnist_reader.hpp"
+#pragma GCC pop_options
 
 #include <Eigen/Dense>
 using Eigen::MatrixXf;
 using Eigen::VectorXf;
 
-#include "mnist/mnist_reader.hpp"
 
 // type defs
 using WeightMatrix = Eigen::MatrixXf;
@@ -121,7 +124,9 @@ class NeuralNetwork {
         std::vector<DenseLayer> layers;
 
     NeuralNetwork(size_t inputLength) 
-    : inputLength(inputLength) {}
+    : inputLength(inputLength) {
+        layers.reserve(10);
+    }
 
 
     void addLayer(size_t neuronAmount, Activation activationFunc) {
@@ -150,7 +155,7 @@ class NeuralNetwork {
             DenseLayer &layer = this->layers[layerInd];
             // activations of the layer left of the current layer "layer"
             ActivationVector& previousActivations = (layerInd == 0) ? inputs : this->layers[layerInd - 1].activations; 
-            layer.netinputs.noalias() = (layer.weights * previousActivations).colwise() + layer.biases;
+            layer.netinputs.noalias() = layer.weights * previousActivations + layer.biases;
             
             switch (layer.activation) {
                 case RELU: {
@@ -166,7 +171,7 @@ class NeuralNetwork {
                     break;
                 }
                 default:
-                    std::cout << "Invalid activation function " << layer.activation << " for layer " << layerInd << "." << endl;
+                    std::cout << "Invalid activation function " << layer.activation << " for layer " << layerInd << "." << std::endl;
                     exit(0);
             }
 
@@ -198,7 +203,7 @@ class NeuralNetwork {
                     break;
                 }
                 default:
-                    std::cout << "Invalid activation function " << layer.activation << " for layer " << l << "." << endl;
+                    std::cout << "Invalid activation function " << layer.activation << " for layer " << l << "." << std::endl;
                     exit(0);
             }
 

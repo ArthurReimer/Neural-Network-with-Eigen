@@ -1,6 +1,9 @@
-// Compile with: g++ -O3 -fopenmp mnist_training.cpp -I../src -I../external/eigen -I../external/mnist/include -std=c++17 -o mnist_training.exe 2>&1
+// g++ -O3 -fopenmp mnist_training.cpp -I../src -I../external/eigen -I../external/mnist/include -std=c++17 -o mnist_training.exe -lgomp
+// g++ -Og mnist_training.cpp -I../src -I../external/eigen -I../external/mnist/include -std=c++17 -o mnist_training.exe
 
 #include "neural_network.hpp"
+
+
 
 class Timer {
     public:
@@ -48,18 +51,16 @@ void train() {
     // MNIST dataset
     auto dataset = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>("../external/mnist");
 
-    
-
     // Constants
     const int inputLength = dataset.training_images[0].size();
     const int outputLength = 10;
-    const int epochs = 100;
+    const int epochs = 400;
 
     double learningRate = 0.0005;
 
     // Network Setup
     NeuralNetwork nn(inputLength);
-    nn.addLayer(128, LEAKY_RELU);
+    nn.addLayer(256, LEAKY_RELU);
     nn.addLayer(128, LEAKY_RELU);
     nn.addLayer(outputLength, SIGMOID);
 
@@ -75,6 +76,7 @@ void train() {
 
     std::cout << "Starting Training" << "\n";
 
+    // training
 
     for (int e = 0; e < epochs; e++) {
         int correct = 0;
@@ -97,6 +99,29 @@ void train() {
         std::cout << "Epoch " << e+1 <<" Accuracy: " << std::fixed << std::setprecision(2) << (accuracy * 100.0f) << "% ";
         timer.endTimerSeconds();
     }
+
+    // testing
+
+    timer.startTimer();
+    VectorXf inputsTestData(inputLength);
+    int correct = 0;
+
+    for (int i = 0; i < dataset.test_images.size(); i++) {
+        
+        normalizeInto(inputsTestData, dataset.test_images[i]);
+        nn.forwardpass(inputsTestData);
+
+        int label = static_cast<int>(dataset.test_labels[i]);
+        int prediction = argmax(nn.layers[nn.layers.size()-1].activations);
+        if (prediction == label) {
+            correct += 1;
+        }
+    }
+
+    std::cout << std::endl << "Testing trained model" << std::endl;
+    float accuracy = static_cast<float>(correct) / dataset.test_images.size();
+    std::cout << "Testdata Accuracy: " << std::fixed << std::setprecision(2) << (accuracy * 100.0f) << "% ";
+    timer.endTimerSeconds();
 }
 
 int main() {
